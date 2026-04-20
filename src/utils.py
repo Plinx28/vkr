@@ -1,9 +1,7 @@
 """
-Вспомогательные функции для проекта:
-- фиксация случайных seed для воспроизводимости
-- таймеры выполнения
-- вычисление метрик классификации
-- загрузка и разделение подготовленных данных
+Вспомогательные функции с поддержкой работы с большими данными:
+- загрузка случайной подвыборки
+- генератор батчей для нейросетей
 """
 
 import os
@@ -11,24 +9,17 @@ import time
 import random
 import logging
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Optional, Dict, Any, List
 from contextlib import contextmanager
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    roc_auc_score, average_precision_score, matthews_corrcoef,
-    confusion_matrix
+    roc_auc_score, average_precision_score, matthews_corrcoef
 )
-
-# Попытка импорта TensorFlow для фиксации seed (если установлен)
-try:
-    import tensorflow as tf
-    TF_AVAILABLE = True
-except ImportError:
-    TF_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -37,18 +28,10 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def set_seed(seed: int = 42) -> None:
-    """
-    Фиксирует все источники случайности для воспроизводимости.
-    """
     random.seed(seed)
     np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
-
-    if TF_AVAILABLE:
-        tf.random.set_seed(seed)
-        # Дополнительные настройки для детерминизма GPU (если есть)
-        # tf.config.experimental.enable_op_determinism()
-
+    tf.random.set_seed(seed)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Таймеры
@@ -56,9 +39,6 @@ def set_seed(seed: int = 42) -> None:
 
 @contextmanager
 def timer(name: str = "Operation", log_level: int = logging.INFO):
-    """
-    Контекстный менеджер для измерения времени выполнения блока кода.
-    """
     start = time.perf_counter()
     logger.log(log_level, f"{name} started...")
     try:
@@ -67,21 +47,16 @@ def timer(name: str = "Operation", log_level: int = logging.INFO):
         elapsed = time.perf_counter() - start
         logger.log(log_level, f"{name} completed in {elapsed:.3f} seconds")
 
-
 class Timer:
-    """Класс-таймер для ручного запуска/остановки."""
     def __init__(self):
         self.start_time = None
         self.end_time = None
-
     def start(self):
         self.start_time = time.perf_counter()
         return self
-
     def stop(self):
         self.end_time = time.perf_counter()
         return self.elapsed
-
     @property
     def elapsed(self) -> float:
         if self.start_time is None:
@@ -89,18 +64,12 @@ class Timer:
         end = self.end_time if self.end_time is not None else time.perf_counter()
         return end - self.start_time
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Метрики
 # ─────────────────────────────────────────────────────────────────────────────
 
 def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray, 
                     y_proba: Optional[np.ndarray] = None) -> Dict[str, float]:
-    """
-    Вычисляет набор метрик бинарной классификации.
-    Возвращает словарь с ключами: accuracy, precision, recall, f1, mcc,
-    roc_auc (если переданы вероятности), pr_auc (если переданы вероятности).
-    """
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
@@ -108,82 +77,81 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray,
         "f1": f1_score(y_true, y_pred, zero_division=0),
         "mcc": matthews_corrcoef(y_true, y_pred),
     }
-
     if y_proba is not None:
         metrics["roc_auc"] = roc_auc_score(y_true, y_proba)
         metrics["pr_auc"] = average_precision_score(y_true, y_proba)
-
     return metrics
 
-
 def print_metrics(metrics: Dict[str, float], title: str = "Metrics") -> None:
-    """Форматированный вывод метрик."""
     print(f"\n{title}")
     print("-" * 40)
     for name, value in metrics.items():
         print(f"{name:12s}: {value:.4f}")
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Загрузка и подготовка данных
+# Работа с данными
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_all_processed_data(data_dir: Path = Path("data/processed")) -> Tuple[np.ndarray, np.ndarray]:
+def load_sample_data(data_dir: Path = Path("data/processed"),
+                     max_samples: int = 1_000_000,
+                     random_state: int = 42) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Загружает все CSV файлы из data/processed и объединяет их в единые X и y.
-    Предполагается, что колонка 'Label' содержит целевую переменную (0/1).
+    Загружает случайную подвыборку из CSV-файлов, не загружая всё в память.
+    Использует reservoir sampling для больших файлов.
     """
     csv_files = sorted(data_dir.glob("*.csv"))
     if not csv_files:
-        raise FileNotFoundError(f"No CSV files found in {data_dir}")
+        raise FileNotFoundError(f"No CSV files in {data_dir}")
 
-    logger.info(f"Loading {len(csv_files)} processed CSV files...")
-    dfs = []
+    # Определим общее количество строк (быстрый подсчёт)
+    total_rows = 0
     for fpath in csv_files:
-        df = pd.read_csv(fpath)
-        dfs.append(df)
-        logger.debug(f"Loaded {fpath.name}: shape={df.shape}")
+        with open(fpath, 'r') as f:
+            total_rows += sum(1 for _ in f) - 1  # минус заголовок
 
-    full_df = pd.concat(dfs, ignore_index=True)
-    logger.info(f"Total samples: {full_df.shape[0]}, features: {full_df.shape[1]-1}")
+    logger.info(f"Total rows in all files: {total_rows}")
+    sample_size = min(max_samples, total_rows)
+    logger.info(f"Taking random sample of {sample_size} rows")
 
-    if "Label" not in full_df.columns:
-        raise KeyError("Column 'Label' not found in data")
+    # Reservoir sampling для выбора строк из множества файлов
+    np.random.seed(random_state)
+    chosen_indices = set(np.random.choice(total_rows, size=sample_size, replace=False))
 
-    y = full_df["Label"].values.astype(int)
-    X = full_df.drop(columns=["Label"]).values.astype(np.float32)
+    X_list, y_list = [], []
+    current_offset = 0
+    for fpath in csv_files:
+        # Читаем файл чанками, чтобы не загружать целиком
+        chunk_iter = pd.read_csv(fpath, chunksize=100_000)
+        for chunk in chunk_iter:
+            chunk_size = len(chunk)
+            chunk_indices = np.arange(current_offset, current_offset + chunk_size)
+            mask = np.isin(chunk_indices, list(chosen_indices))
+            if mask.any():
+                selected = chunk.iloc[mask]
+                if "Label" in selected.columns:
+                    y_list.append(selected["Label"].values.astype(int))
+                    X_list.append(selected.drop(columns=["Label"]).values.astype(np.float32))
+            current_offset += chunk_size
 
+    X = np.vstack(X_list) if X_list else np.empty((0, 0))
+    y = np.concatenate(y_list) if y_list else np.empty((0,))
+    logger.info(f"Sample loaded: X shape {X.shape}, y shape {y.shape}")
     return X, y
 
-
-def split_data(X: np.ndarray, y: np.ndarray,
-               test_size: float = 0.2,
-               random_state: int = 42,
-               stratify: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Разделение данных на обучающую и тестовую выборки.
-    По умолчанию стратифицированное для сохранения пропорции классов.
-    """
-    stratify_arg = y if stratify else None
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state, stratify=stratify_arg
-    )
-    logger.info(f"Train size: {X_train.shape[0]}, Test size: {X_test.shape[0]}")
-    logger.info(f"Train positive ratio: {y_train.mean():.4f}, Test positive ratio: {y_test.mean():.4f}")
-    return X_train, X_test, y_train, y_test
-
-
-def get_dataset_splits(force_reload: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def get_dataset_splits(force_reload: bool = False,
+                       max_samples: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Возвращает X_train, X_test, y_train, y_test.
-    Можно кэшировать результаты в .npy файлы для ускорения.
+    Если max_samples задан, берёт подвыборку, иначе пытается загрузить все (риск MemoryError).
     """
     cache_dir = Path("data/splits")
     cache_dir.mkdir(parents=True, exist_ok=True)
-    X_train_path = cache_dir / "X_train.npy"
-    X_test_path = cache_dir / "X_test.npy"
-    y_train_path = cache_dir / "y_train.npy"
-    y_test_path = cache_dir / "y_test.npy"
+
+    suffix = f"_sample{max_samples}" if max_samples else "_full"
+    X_train_path = cache_dir / f"X_train{suffix}.npy"
+    X_test_path = cache_dir / f"X_test{suffix}.npy"
+    y_train_path = cache_dir / f"y_train{suffix}.npy"
+    y_test_path = cache_dir / f"y_test{suffix}.npy"
 
     if not force_reload and all(p.exists() for p in [X_train_path, X_test_path, y_train_path, y_test_path]):
         logger.info("Loading cached splits...")
@@ -193,15 +161,97 @@ def get_dataset_splits(force_reload: bool = False) -> Tuple[np.ndarray, np.ndarr
         y_test = np.load(y_test_path)
         return X_train, X_test, y_train, y_test
 
-    logger.info("Loading and splitting data from processed files...")
-    X, y = load_all_processed_data()
-    X_train, X_test, y_train, y_test = split_data(X, y)
+    logger.info("Loading data...")
+    if max_samples is not None:
+        X, y = load_sample_data(max_samples=max_samples)
+    else:
+        # Опасный путь – может упасть
+        X, y = load_all_processed_data()  # оставлена для совместимости, но не рекомендуется
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
-    # Сохраняем для последующего использования
     np.save(X_train_path, X_train)
     np.save(X_test_path, X_test)
     np.save(y_train_path, y_train)
     np.save(y_test_path, y_test)
     logger.info("Splits saved to disk.")
-
     return X_train, X_test, y_train, y_test
+
+def load_all_processed_data(data_dir: Path = Path("data/processed")):
+    """Загружает все данные – используется только если памяти достаточно."""
+    csv_files = sorted(data_dir.glob("*.csv"))
+    dfs = [pd.read_csv(f) for f in csv_files]
+    full_df = pd.concat(dfs, ignore_index=True)
+    y = full_df["Label"].values.astype(int)
+    X = full_df.drop(columns=["Label"]).values.astype(np.float32)
+    return X, y
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Генератор данных для Keras
+# ─────────────────────────────────────────────────────────────────────────────
+
+class CSVDataGenerator(tf.keras.utils.Sequence):
+    """
+    Генератор батчей, читающий данные из списка CSV-файлов по требованию.
+    """
+    def __init__(self, file_paths: List[Path], batch_size: int = 256,
+                 shuffle: bool = True, seed: int = 42):
+        self.file_paths = file_paths
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.seed = seed
+        self._file_row_counts = []
+        self._total_rows = 0
+        self._file_offsets = []  # глобальный индекс начала каждого файла
+        self._build_index()
+        self.on_epoch_end()
+
+    def _build_index(self):
+        """Подсчитывает количество строк в каждом файле и вычисляет смещения."""
+        offset = 0
+        for fpath in self.file_paths:
+            with open(fpath, 'r', encoding='utf-8') as f:
+                # Быстрый подсчёт строк (минус заголовок)
+                n_rows = sum(1 for _ in f) - 1
+            self._file_row_counts.append(n_rows)
+            self._file_offsets.append(offset)
+            offset += n_rows
+        self._total_rows = offset
+
+    def __len__(self):
+        return int(np.ceil(self._total_rows / self.batch_size))
+
+    def __getitem__(self, idx):
+        start_idx = idx * self.batch_size
+        end_idx = min(start_idx + self.batch_size, self._total_rows)
+        batch_indices = self.indices[start_idx:end_idx]
+
+        # Группируем запрошенные строки по файлам
+        file_to_local_indices = {}
+        for global_idx in batch_indices:
+            # Бинарный поиск файла по глобальному индексу
+            file_idx = np.searchsorted(self._file_offsets, global_idx, side='right') - 1
+            if file_idx < 0:
+                file_idx = 0
+            local_idx = global_idx - self._file_offsets[file_idx]
+            if file_idx not in file_to_local_indices:
+                file_to_local_indices[file_idx] = []
+            file_to_local_indices[file_idx].append(local_idx)
+
+        X_batch, y_batch = [], []
+        for file_idx, local_rows in file_to_local_indices.items():
+            fpath = self.file_paths[file_idx]
+            # Читаем только нужные строки (оптимизация: можно кэшировать DataFrame для файла)
+            df = pd.read_csv(fpath)
+            for r in local_rows:
+                row = df.iloc[r]
+                y_batch.append(row["Label"])
+                X_batch.append(row.drop("Label").values.astype(np.float32))
+
+        return np.array(X_batch), np.array(y_batch)
+
+    def on_epoch_end(self):
+        self.indices = np.arange(self._total_rows)
+        if self.shuffle:
+            np.random.shuffle(self.indices)

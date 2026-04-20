@@ -420,3 +420,6 @@ FodyWeavers.xsd
 /venv
 /.venv
 data
+models
+reports
+configs

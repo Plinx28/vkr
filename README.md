@@ -39,3 +39,10 @@ project_root/
 ├── requirements.txt           # Зависимости Python
 └── README.md                  # Инструкция по воспроизведению экспериментов
 ```
+TensorBoard для визуализации обучения нейросетей запускается командой:
+
+```tensorboard --logdir reports/training_logs```
+
+# Запуск обучения
+
+`python src/train.py --model mlp --params configs/mlp_params.json`
