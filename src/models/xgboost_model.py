@@ -31,8 +31,10 @@ class XGBoostModel(BaseModel):
         self.params = default_params
 
     def build(self, input_shape: int, **kwargs) -> None:
-        self.params["input_shape"] = input_shape
-        self.model = xgb.XGBClassifier(**self.params)
+        self._input_shape = input_shape
+        sk_params = self.params.copy()
+        sk_params.pop('input_shape', None)
+        self.model = xgb.XGBClassifier(**sk_params)
 
     def fit(self, X_train: np.ndarray, y_train: np.ndarray,
             X_val: Optional[np.ndarray] = None, y_val: Optional[np.ndarray] = None,
