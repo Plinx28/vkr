@@ -43,7 +43,6 @@ class LogisticRegressionModel(BaseModel):
     def build(self, input_shape: int, **kwargs) -> None:
         """Инициализация sklearn-классификатора."""
         self._input_shape = input_shape
-        # Создаём копию параметров без 'input_shape'
         sk_params = self.params.copy()
         sk_params.pop('input_shape', None)
         self.model = LogisticRegression(**sk_params)
@@ -51,11 +50,7 @@ class LogisticRegressionModel(BaseModel):
     def fit(self, X_train: np.ndarray, y_train: np.ndarray,
             X_val: Optional[np.ndarray] = None, y_val: Optional[np.ndarray] = None,
             **kwargs) -> None:
-        """
-        Обучение модели.
-        Для логистической регрессии валидационная выборка не используется,
-        так как встроенная регуляризация и tol предотвращают переобучение.
-        """
+        """Обучение модели."""
         if self.model is None:
             self.build(X_train.shape[1])
 
