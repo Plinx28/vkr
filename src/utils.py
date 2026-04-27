@@ -1,7 +1,6 @@
 """
-Вспомогательные функции с поддержкой работы с большими данными:
-- загрузка случайной подвыборки
-- генератор батчей для нейросетей
+Вспомогательные функции: фиксация seed, таймеры, метрики, генератор без перемешивания,
+callback для метрик валидации, подбор порога.
 """
 
 import os
@@ -9,7 +8,7 @@ import time
 import random
 import logging
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any, List
+from typing import Optional, Dict, List
 from contextlib import contextmanager
 
 import numpy as np
@@ -18,13 +17,14 @@ import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    roc_auc_score, average_precision_score, matthews_corrcoef
+    roc_auc_score, average_precision_score, matthews_corrcoef,
+    precision_recall_curve
 )
 
 logger = logging.getLogger(__name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Seed фиксация
+# Seed
 # ─────────────────────────────────────────────────────────────────────────────
 
 def set_seed(seed: int = 42) -> None:
@@ -68,7 +68,7 @@ class Timer:
 # Метрики
 # ─────────────────────────────────────────────────────────────────────────────
 
-def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray, 
+def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray,
                     y_proba: Optional[np.ndarray] = None) -> Dict[str, float]:
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
@@ -89,130 +89,26 @@ def print_metrics(metrics: Dict[str, float], title: str = "Metrics") -> None:
         print(f"{name:12s}: {value:.4f}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Работа с данными
-# ─────────────────────────────────────────────────────────────────────────────
-
-def load_sample_data(data_dir: Path = Path("data/processed"),
-                     max_samples: int = 1_000_000,
-                     random_state: int = 42) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Загружает случайную подвыборку из CSV-файлов, не загружая всё в память.
-    Использует reservoir sampling для больших файлов.
-    """
-    csv_files = sorted(data_dir.glob("*.csv"))
-    if not csv_files:
-        raise FileNotFoundError(f"No CSV files in {data_dir}")
-
-    # Определим общее количество строк (быстрый подсчёт)
-    total_rows = 0
-    for fpath in csv_files:
-        with open(fpath, 'r') as f:
-            total_rows += sum(1 for _ in f) - 1  # минус заголовок
-
-    logger.info(f"Total rows in all files: {total_rows}")
-    sample_size = min(max_samples, total_rows)
-    logger.info(f"Taking random sample of {sample_size} rows")
-
-    # Reservoir sampling для выбора строк из множества файлов
-    np.random.seed(random_state)
-    chosen_indices = set(np.random.choice(total_rows, size=sample_size, replace=False))
-
-    X_list, y_list = [], []
-    current_offset = 0
-    for fpath in csv_files:
-        # Читаем файл чанками, чтобы не загружать целиком
-        chunk_iter = pd.read_csv(fpath, chunksize=100_000)
-        for chunk in chunk_iter:
-            chunk_size = len(chunk)
-            chunk_indices = np.arange(current_offset, current_offset + chunk_size)
-            mask = np.isin(chunk_indices, list(chosen_indices))
-            if mask.any():
-                selected = chunk.iloc[mask]
-                if "Label" in selected.columns:
-                    y_list.append(selected["Label"].values.astype(int))
-                    X_list.append(selected.drop(columns=["Label"]).values.astype(np.float32))
-            current_offset += chunk_size
-
-    X = np.vstack(X_list) if X_list else np.empty((0, 0))
-    y = np.concatenate(y_list) if y_list else np.empty((0,))
-    logger.info(f"Sample loaded: X shape {X.shape}, y shape {y.shape}")
-    return X, y
-
-def get_dataset_splits(force_reload: bool = False,
-                       max_samples: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Возвращает X_train, X_test, y_train, y_test.
-    Если max_samples задан, берёт подвыборку, иначе пытается загрузить все (риск MemoryError).
-    """
-    cache_dir = Path("data/splits")
-    cache_dir.mkdir(parents=True, exist_ok=True)
-
-    suffix = f"_sample{max_samples}" if max_samples else "_full"
-    X_train_path = cache_dir / f"X_train{suffix}.npy"
-    X_test_path = cache_dir / f"X_test{suffix}.npy"
-    y_train_path = cache_dir / f"y_train{suffix}.npy"
-    y_test_path = cache_dir / f"y_test{suffix}.npy"
-
-    if not force_reload and all(p.exists() for p in [X_train_path, X_test_path, y_train_path, y_test_path]):
-        logger.info("Loading cached splits...")
-        X_train = np.load(X_train_path)
-        X_test = np.load(X_test_path)
-        y_train = np.load(y_train_path)
-        y_test = np.load(y_test_path)
-        return X_train, X_test, y_train, y_test
-
-    logger.info("Loading data...")
-    if max_samples is not None:
-        X, y = load_sample_data(max_samples=max_samples)
-    else:
-        # Опасный путь – может упасть
-        X, y = load_all_processed_data()  # оставлена для совместимости, но не рекомендуется
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-
-    np.save(X_train_path, X_train)
-    np.save(X_test_path, X_test)
-    np.save(y_train_path, y_train)
-    np.save(y_test_path, y_test)
-    logger.info("Splits saved to disk.")
-    return X_train, X_test, y_train, y_test
-
-def load_all_processed_data(data_dir: Path = Path("data/processed")):
-    """Загружает все данные – используется только если памяти достаточно."""
-    csv_files = sorted(data_dir.glob("*.csv"))
-    dfs = [pd.read_csv(f) for f in csv_files]
-    full_df = pd.concat(dfs, ignore_index=True)
-    y = full_df["Label"].values.astype(int)
-    X = full_df.drop(columns=["Label"]).values.astype(np.float32)
-    return X, y
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Генератор данных для Keras
+# Генератор
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CSVDataGenerator(tf.keras.utils.Sequence):
-    """
-    Генератор батчей, читающий данные из списка CSV-файлов по требованию.
-    """
     def __init__(self, file_paths: List[Path], batch_size: int = 256,
-                 shuffle: bool = True, seed: int = 42):
+                 shuffle: bool = False, seed: int = 42):
         self.file_paths = file_paths
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.seed = seed
         self._file_row_counts = []
         self._total_rows = 0
-        self._file_offsets = []  # глобальный индекс начала каждого файла
+        self._file_offsets = []
         self._build_index()
         self.on_epoch_end()
 
     def _build_index(self):
-        """Подсчитывает количество строк в каждом файле и вычисляет смещения."""
         offset = 0
         for fpath in self.file_paths:
             with open(fpath, 'r', encoding='utf-8') as f:
-                # Быстрый подсчёт строк (минус заголовок)
                 n_rows = sum(1 for _ in f) - 1
             self._file_row_counts.append(n_rows)
             self._file_offsets.append(offset)
@@ -227,31 +123,137 @@ class CSVDataGenerator(tf.keras.utils.Sequence):
         end_idx = min(start_idx + self.batch_size, self._total_rows)
         batch_indices = self.indices[start_idx:end_idx]
 
-        # Группируем запрошенные строки по файлам
-        file_to_local_indices = {}
-        for global_idx in batch_indices:
-            # Бинарный поиск файла по глобальному индексу
-            file_idx = np.searchsorted(self._file_offsets, global_idx, side='right') - 1
-            if file_idx < 0:
-                file_idx = 0
-            local_idx = global_idx - self._file_offsets[file_idx]
-            if file_idx not in file_to_local_indices:
-                file_to_local_indices[file_idx] = []
-            file_to_local_indices[file_idx].append(local_idx)
+        file_to_local = {}
+        for gidx in batch_indices:
+            fidx = np.searchsorted(self._file_offsets, gidx, side='right') - 1
+            if fidx < 0:
+                fidx = 0
+            lidx = gidx - self._file_offsets[fidx]
+            file_to_local.setdefault(fidx, []).append(lidx)
 
         X_batch, y_batch = [], []
-        for file_idx, local_rows in file_to_local_indices.items():
-            fpath = self.file_paths[file_idx]
-            # Читаем только нужные строки (оптимизация: можно кэшировать DataFrame для файла)
-            df = pd.read_csv(fpath)
-            for r in local_rows:
+        for fidx, lids in file_to_local.items():
+            df = pd.read_csv(self.file_paths[fidx])
+            for r in lids:
                 row = df.iloc[r]
                 y_batch.append(row["Label"])
                 X_batch.append(row.drop("Label").values.astype(np.float32))
-
         return np.array(X_batch), np.array(y_batch)
 
     def on_epoch_end(self):
         self.indices = np.arange(self._total_rows)
         if self.shuffle:
             np.random.shuffle(self.indices)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Callback метрик на валидации
+# ─────────────────────────────────────────────────────────────────────────────
+
+class MetricsCallback(tf.keras.callbacks.Callback):
+    def __init__(self, validation_data, threshold=0.5):
+        super().__init__()
+        self.validation_data = validation_data
+        self.threshold = threshold
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        if isinstance(self.validation_data, tf.keras.utils.Sequence):
+            y_true, y_pred = [], []
+            for Xb, yb in self.validation_data:
+                proba = self.model.predict(Xb, verbose=0)
+                pred = (proba > self.threshold).astype(int).flatten()
+                y_true.extend(yb)
+                y_pred.extend(pred)
+            y_true = np.array(y_true)
+            y_pred = np.array(y_pred)
+        else:
+            X_val, y_val = self.validation_data
+            proba = self.model.predict(X_val, verbose=0)
+            y_pred = (proba > self.threshold).astype(int).flatten()
+            y_true = y_val
+
+        p = precision_score(y_true, y_pred, zero_division=0)
+        r = recall_score(y_true, y_pred, zero_division=0)
+        f1 = f1_score(y_true, y_pred, zero_division=0)
+        mcc = matthews_corrcoef(y_true, y_pred)
+
+        logs['val_precision'] = p
+        logs['val_recall'] = r
+        logs['val_f1'] = f1
+        logs['val_mcc'] = mcc
+        print(f" - val_precision: {p:.4f} - val_recall: {r:.4f} - val_f1: {f1:.4f} - val_mcc: {mcc:.4f}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Подбор порога
+# ─────────────────────────────────────────────────────────────────────────────
+
+def find_optimal_threshold(y_true, y_proba):
+    precisions, recalls, thresholds = precision_recall_curve(y_true, y_proba)
+    thresholds = np.append(thresholds, 1.0)
+    f1s = 2 * (precisions * recalls) / (precisions + recalls + 1e-10)
+    best_idx = np.argmax(f1s)
+    return thresholds[best_idx]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Загрузка подвыборки (для классических моделей)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def load_sample_data(data_dir=Path("data/processed"), max_samples=1_000_000, random_state=42):
+    csv_files = sorted(data_dir.glob("*.csv"))
+    if not csv_files:
+        raise FileNotFoundError(f"No CSV files in {data_dir}")
+    total = 0
+    for f in csv_files:
+        with open(f, 'r') as fp:
+            total += sum(1 for _ in fp) - 1
+    sample_size = min(max_samples, total)
+    np.random.seed(random_state)
+    chosen = set(np.random.choice(total, size=sample_size, replace=False))
+    X_list, y_list = [], []
+    cur = 0
+    for f in csv_files:
+        for chunk in pd.read_csv(f, chunksize=100_000):
+            idx = np.arange(cur, cur + len(chunk))
+            mask = np.isin(idx, list(chosen))
+            if mask.any():
+                sel = chunk.iloc[mask]
+                y_list.append(sel["Label"].values.astype(int))
+                X_list.append(sel.drop(columns=["Label"]).values.astype(np.float32))
+            cur += len(chunk)
+    X = np.vstack(X_list) if X_list else np.empty((0,0))
+    y = np.concatenate(y_list) if y_list else np.empty((0,))
+    return X, y
+
+def get_dataset_splits(force_reload=False, max_samples=None):
+    cache_dir = Path("data/splits")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    suffix = f"_sample{max_samples}" if max_samples else "_full"
+    X_tr_path = cache_dir / f"X_train{suffix}.npy"
+    X_te_path = cache_dir / f"X_test{suffix}.npy"
+    y_tr_path = cache_dir / f"y_train{suffix}.npy"
+    y_te_path = cache_dir / f"y_test{suffix}.npy"
+
+    if not force_reload and all(p.exists() for p in [X_tr_path, X_te_path, y_tr_path, y_te_path]):
+        logger.info("Loading cached splits...")
+        return (np.load(X_tr_path), np.load(X_te_path),
+                np.load(y_tr_path), np.load(y_te_path))
+
+    if max_samples is not None:
+        X, y = load_sample_data(max_samples=max_samples)
+    else:
+        csv_files = sorted(Path("data/processed").glob("*.csv"))
+        dfs = [pd.read_csv(f) for f in csv_files]
+        full = pd.concat(dfs, ignore_index=True)
+        y = full["Label"].values.astype(int)
+        X = full.drop(columns=["Label"]).values.astype(np.float32)
+        del full
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+    np.save(X_tr_path, X_train)
+    np.save(X_te_path, X_test)
+    np.save(y_tr_path, y_train)
+    np.save(y_te_path, y_test)
+    logger.info("Splits saved.")
+    return X_train, X_test, y_train, y_test

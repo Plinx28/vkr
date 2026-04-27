@@ -13,10 +13,7 @@ from .base_model import BaseModel
 
 
 class LogisticRegressionModel(BaseModel):
-    """
-    Модель логистической регрессии с предустановленными параметрами,
-    оптимизированными для задачи бинарной классификации сетевого трафика.
-    """
+    """Модель логистической регрессии."""
 
     def __init__(self, **kwargs):
         super().__init__(name="logistic_regression", **kwargs)

@@ -12,6 +12,7 @@ from .base_model import BaseModel
 
 
 class XGBoostModel(BaseModel):
+    """Модель градиентного бустинга над деревьями решений."""
     def __init__(self, **kwargs):
         super().__init__(name="xgboost", **kwargs)
         # Параметры по умолчанию, оптимизированные для дисбаланса

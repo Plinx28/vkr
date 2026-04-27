@@ -42,7 +42,18 @@ project_root/
 TensorBoard для визуализации обучения нейросетей запускается командой:
 
 ```tensorboard --logdir reports/training_logs```
+# Подготовка данных
+<p>Сначала выполняется масштабирование признаков и сохранение данных в data/processed</p>
+`python src/data_preparation.py`
+
+<p>Затем данные разделяются на выборки train, val, test</p>
+'python src/split_data.py`
 
 # Запуск обучения
 
 `python src/train.py --model mlp --params configs/mlp_params.json`
+`python src/train.py --model mlp --max_samples 20000000 --params configs/mlp_params.json`
+
+# Тестирование обученных моделей
+
+`python src/evaluate.py --model all`

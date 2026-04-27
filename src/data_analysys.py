@@ -1,14 +1,14 @@
 """
 Модуль анализа распределения меток (Label) в данных сетевого трафика.
 Универсально работает с любыми папками, содержащими CSV-файлы со столбцом 'Label'.
-Строит столбчатую диаграмму с логарифмической шкалой для всех уникальных значений metок.
+Строит столбчатую диаграмму с логарифмической шкалой для всех уникальных значений меток.
 Сохраняет числовую сводку в CSV и график в PNG.
+Теперь также анализирует train/val/test после разделения.
 """
 
 import logging
 from pathlib import Path
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 
 logging.basicConfig(
@@ -29,7 +29,7 @@ def analyze_labels_in_directory(data_dir: Path, output_prefix: str, figures_dir:
 
     Параметры:
         data_dir      – путь к папке с CSV-файлами
-        output_prefix – префикс для имени выходных файлов (например, 'raw' или 'processed')
+        output_prefix – префикс для имени выходных файлов (например, 'train', 'val', 'test', 'raw', 'processed')
         figures_dir   – путь к папке для сохранения графиков
         analysis_dir  – путь к папке для сохранения CSV-файлов
     """
@@ -89,7 +89,7 @@ def analyze_labels_in_directory(data_dir: Path, output_prefix: str, figures_dir:
     ax.set_yscale("log")
     ax.set_ylabel("Количество записей")
     ax.set_xlabel("Метка класса")
-    ax.set_title(f"Распределение меток в данных")
+    ax.set_title(f"Распределение меток в данных ({output_prefix})")
 
     # Добавление числовых подписей над столбцами
     for bar, count in zip(bars, counts):
@@ -114,25 +114,37 @@ def analyze_labels_in_directory(data_dir: Path, output_prefix: str, figures_dir:
 
 
 def main():
+    # Каталоги для анализа
     raw_dir = Path("data/raw")
     processed_dir = Path("data/processed")
+    train_dir = Path("data/train")
+    val_dir = Path("data/val")
+    test_dir = Path("data/test")
+
     figures_dir = Path("reports/figures")
     analysis_dir = Path("reports/data_analysis")
 
     figures_dir.mkdir(parents=True, exist_ok=True)
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
-    # Сырые данные (raw) – строковые метки
-    if raw_dir.exists():
-        analyze_labels_in_directory(raw_dir, "raw", figures_dir, analysis_dir)
-    else:
-        logger.warning(f"Папка {raw_dir} не найдена, анализ raw пропущен.")
+    # # Сырые данные (raw) – строковые метки
+    # if raw_dir.exists():
+    #     analyze_labels_in_directory(raw_dir, "raw", figures_dir, analysis_dir)
+    # else:
+    #     logger.warning(f"Папка {raw_dir} не найдена, анализ raw пропущен.")
 
-    # Обработанные данные (processed) – бинарные метки 0/1
-    if processed_dir.exists():
-        analyze_labels_in_directory(processed_dir, "processed", figures_dir, analysis_dir)
-    else:
-        logger.warning(f"Папка {processed_dir} не найдена, анализ processed пропущен.")
+    # # Обработанные данные (processed) – бинарные метки 0/1
+    # if processed_dir.exists():
+    #     analyze_labels_in_directory(processed_dir, "processed", figures_dir, analysis_dir)
+    # else:
+    #     logger.warning(f"Папка {processed_dir} не найдена, анализ processed пропущен.")
+
+    # Данные после разделения train/val/test
+    for subset_name, subset_dir in [("train", train_dir), ("val", val_dir), ("test", test_dir)]:
+        if subset_dir.exists():
+            analyze_labels_in_directory(subset_dir, subset_name, figures_dir, analysis_dir)
+        else:
+            logger.warning(f"Папка {subset_dir} не найдена, анализ {subset_name} пропущен.")
 
     logger.info("Анализ распределения меток завершён.")
 
