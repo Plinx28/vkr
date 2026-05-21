@@ -20,15 +20,15 @@ class AutoencoderModel(BaseModel):
         super().__init__(name="autoencoder", **kwargs)
         default_params = {
             "encoding_dim": 32,
-            "hidden_layers": [32, 16],
+            "hidden_layers": [64, 32],
             "dropout_rate": 0.2,
             "activation": "relu",
             "output_activation": "sigmoid",
             "reconstruction_weight": 0.5,
             "optimizer": "adam",
-            "learning_rate": 0.01,
+            "learning_rate": 0.001,
             "batch_size": 256,
-            "epochs": 12,
+            "epochs": 13,
             "early_stopping_patience": 2,
             "focal_gamma": 2.0,        # не используется
         }
@@ -159,7 +159,7 @@ class AutoencoderModel(BaseModel):
         with open(path / "params.json", "r") as f:
             params = json.load(f)
         instance = cls(**params)
-        instance.full_model = keras.models.load_model(path / "full_model.h5")
+        instance.full_model = keras.models.load_model(path / "full_model.h5", compile=False)
         instance.encoder = Model(
             inputs=instance.full_model.input,
             outputs=instance.full_model.get_layer("bottleneck").output

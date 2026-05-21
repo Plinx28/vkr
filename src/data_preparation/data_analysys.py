@@ -12,13 +12,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
-def analyze_labels_in_directory(data_dir: Path, output_prefix: str, figures_dir: Path, analysis_dir: Path):
+def analyze_labels_in_directory(
+    data_dir: Path, output_prefix: str, figures_dir: Path, analysis_dir: Path
+):
     """
     Подсчитывает распределение всех уникальных значений столбца 'Label'
     во всех CSV-файлах из указанной директории.
@@ -94,16 +95,16 @@ def analyze_labels_in_directory(data_dir: Path, output_prefix: str, figures_dir:
     # Добавление числовых подписей над столбцами
     for bar, count in zip(bars, counts):
         ax.text(
-                bar.get_x() + bar.get_width()/2,
-                bar.get_height() * 1.05,
-                f'{count:,}',
-                ha='center',
-                va='bottom',
-                fontsize=7,
-            )
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() * 1.05,
+            f"{count:,}",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+        )
 
     # Сетка по Y
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
     fig.tight_layout()
 
     # Сохранение графика
@@ -116,7 +117,6 @@ def analyze_labels_in_directory(data_dir: Path, output_prefix: str, figures_dir:
 def main():
     # Каталоги для анализа
     raw_dir = Path("data/raw")
-    processed_dir = Path("data/processed")
     train_dir = Path("data/train")
     val_dir = Path("data/val")
     test_dir = Path("data/test")
@@ -127,18 +127,26 @@ def main():
     figures_dir.mkdir(parents=True, exist_ok=True)
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
-    # # Сырые данные (raw) – строковые метки
+    # Сырые данные (raw) – строковые метки
     if raw_dir.exists():
         analyze_labels_in_directory(raw_dir, "raw", figures_dir, analysis_dir)
     else:
         logger.warning(f"Папка {raw_dir} не найдена, анализ raw пропущен.")
 
     # Данные после разделения train/val/test
-    for subset_name, subset_dir in [("train", train_dir), ("val", val_dir), ("test", test_dir)]:
+    for subset_name, subset_dir in [
+        ("train", train_dir),
+        ("val", val_dir),
+        ("test", test_dir),
+    ]:
         if subset_dir.exists():
-            analyze_labels_in_directory(subset_dir, subset_name, figures_dir, analysis_dir)
+            analyze_labels_in_directory(
+                subset_dir, subset_name, figures_dir, analysis_dir
+            )
         else:
-            logger.warning(f"Папка {subset_dir} не найдена, анализ {subset_name} пропущен.")
+            logger.warning(
+                f"Папка {subset_dir} не найдена, анализ {subset_name} пропущен."
+            )
 
     logger.info("Анализ распределения меток завершён.")
 

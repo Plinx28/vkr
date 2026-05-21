@@ -4,59 +4,71 @@ import glob
 import numpy as np
 
 # ================= НАСТРОЙКИ =================
-RAW_DIR = 'data/raw'
-OUT_DIR = 'data/cut_features'
+RAW_DIR = "data/raw"
+OUT_DIR = "data/cut_features"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 FEATURE_MAPPING = {
     # === Базовые ===
-    'Flow Duration': ['Flow Duration', 'Flow Duration (ms)'],
-    'Total Fwd Packet': ['Total Fwd Packet', 'Total Fwd Packets', 'Total_Fwd_Packets'],
-    'Total Bwd packets': ['Total Bwd packets', 'Total Bwd Packets', 'Total_Bwd_Packets'],
-
+    "Flow Duration": ["Flow Duration", "Flow Duration (ms)"],
+    "Total Fwd Packet": ["Total Fwd Packet", "Total Fwd Packets", "Total_Fwd_Packets"],
+    "Total Bwd packets": [
+        "Total Bwd packets",
+        "Total Bwd Packets",
+        "Total_Bwd_Packets",
+    ],
     # === Размеры пакетов (только fwd — наиболее информативные) ===
-    'Fwd Packet Length Mean': ['Fwd Packet Length Mean', 'Fwd Pkt Len Mean', 'Fwd Packet Length Avg'],
-    'Fwd Packet Length Std': ['Fwd Packet Length Std', 'Fwd Pkt Len Std'],
-
+    "Fwd Packet Length Mean": [
+        "Fwd Packet Length Mean",
+        "Fwd Pkt Len Mean",
+        "Fwd Packet Length Avg",
+    ],
+    "Fwd Packet Length Std": ["Fwd Packet Length Std", "Fwd Pkt Len Std"],
     # === Временные (направленные IAT, без агрегированного Flow IAT) ===
-    'Fwd IAT Mean': ['Fwd IAT Mean', 'Fwd IAT Avg'],
-    'Bwd IAT Mean': ['Bwd IAT Mean', 'Bwd IAT Avg'],
-
+    "Fwd IAT Mean": ["Fwd IAT Mean", "Fwd IAT Avg"],
+    "Bwd IAT Mean": ["Bwd IAT Mean", "Bwd IAT Avg"],
     # === Скорости (общие — достаточно для большинства атак) ===
-    'Flow Bytes/s': ['Flow Bytes/s', 'Flow Byts/s', 'Flow B/s'],
-    'Flow Packets/s': ['Flow Packets/s', 'Flow Pkts/s', 'Flow P/s'],
-
+    "Flow Bytes/s": ["Flow Bytes/s", "Flow Byts/s", "Flow B/s"],
+    "Flow Packets/s": ["Flow Packets/s", "Flow Pkts/s", "Flow P/s"],
     # === TCP-флаги (критичны для обнаружения сканирования/эксплойтов) ===
-    'FIN Flag Cnt': ['FIN Flag Cnt', 'FIN Flag Count'],
-    'SYN Flag Cnt': ['SYN Flag Cnt', 'SYN Flag Count'],
-    'RST Flag Cnt': ['RST Flag Cnt', 'RST Flag Count'],
-    'ACK Flag Count': ['ACK Flag Cnt', 'ACK Flag Count'],
-
+    "FIN Flag Cnt": ["FIN Flag Cnt", "FIN Flag Count"],
+    "SYN Flag Cnt": ["SYN Flag Cnt", "SYN Flag Count"],
+    "RST Flag Cnt": ["RST Flag Cnt", "RST Flag Count"],
+    "ACK Flag Count": ["ACK Flag Cnt", "ACK Flag Count"],
     # === Активность соединения (уникальная информация о поведении) ===
-    'Active Mean': ['Active Mean', 'Active Avg'],
-    'Idle Mean': ['Idle Mean', 'Idle Avg'],
-
+    "Active Mean": ["Active Mean", "Active Avg"],
+    "Idle Mean": ["Idle Mean", "Idle Avg"],
     # === TCP window (важно для fingerprinting) ===
-    'FWD Init Win Bytes': ['FWD Init Win Bytes', 'Fwd Init Win Byts', 'Fwd Init Win Bytes'],
-
+    "FWD Init Win Bytes": [
+        "FWD Init Win Bytes",
+        "Fwd Init Win Byts",
+        "Fwd Init Win Bytes",
+    ],
     # === Метка ===
-    'Label': ['Label', ' label', 'LABEL', 'Label ']
+    "Label": ["Label", " label", "LABEL", "Label "],
 }
 
 # =============================================
+
 
 def process_csv(input_path, output_path, mapping):
     """Читает, сопоставляет имена, обрезает, преобразует метку и сохраняет."""
     try:
         # 1. Автоопределение разделителя и кодировки
-        for sep in [';', ',', '\t']:
-            sep = ','
+        for sep in [";", ",", "\t"]:
+            sep = ","
             try:
-                df = pd.read_csv(input_path, sep=sep, on_bad_lines='skip',
-                                 encoding='utf-8-sig', nrows=2)
+                df = pd.read_csv(
+                    input_path,
+                    sep=sep,
+                    on_bad_lines="skip",
+                    encoding="utf-8-sig",
+                    nrows=2,
+                )
                 if len(df.columns) > 5:  # Если прочиталось адекватное кол-во столбцов
-                    df = pd.read_csv(input_path, sep=sep, on_bad_lines='skip',
-                                     encoding='utf-8-sig')
+                    df = pd.read_csv(
+                        input_path, sep=sep, on_bad_lines="skip", encoding="utf-8-sig"
+                    )
                     break
             except:
                 continue
@@ -97,7 +109,7 @@ def process_csv(input_path, output_path, mapping):
         df_cut.replace([np.inf, -np.inf], np.nan, inplace=True)
 
         # 7. Сохранение
-        df_cut.to_csv(output_path, index=False, sep=';')
+        df_cut.to_csv(output_path, index=False, sep=";")
         return len(df_cut)
 
     except Exception as e:
@@ -107,7 +119,7 @@ def process_csv(input_path, output_path, mapping):
 
 # ================= ОСНОВНОЙ ЦИКЛ =================
 print("🔍 Поиск CSV файлов в data/raw...")
-csv_files = glob.glob(os.path.join(RAW_DIR, '*.csv'))
+csv_files = glob.glob(os.path.join(RAW_DIR, "*.csv"))
 
 if not csv_files:
     print("❌ Файлы .csv не найдены в папке data/raw. Проверьте путь.")
@@ -120,7 +132,7 @@ else:
 
     for i, filepath in enumerate(csv_files, 1):
         filename = os.path.basename(filepath)
-        out_path = os.path.join(OUT_DIR, f'cut_{filename}')
+        out_path = os.path.join(OUT_DIR, f"cut_{filename}")
 
         print(f"[{i}/{len(csv_files)}] Обработка: {filename}")
         rows = process_csv(filepath, out_path, FEATURE_MAPPING)
@@ -129,11 +141,13 @@ else:
         # Вывод реальных заголовков первого файла для верификации
         if i == 1 and not debug_done:
             try:
-                sample = pd.read_csv(filepath, sep=';', nrows=0, encoding='utf-8-sig')
+                sample = pd.read_csv(filepath, sep=";", nrows=0, encoding="utf-8-sig")
                 sample.columns = sample.columns.str.strip()
                 print(f"\n🔎 Реальные заголовки в файле {filename}:")
                 print(list(sample.columns))
-                print("👆 Сравните с FEATURE_MAPPING, если признаки всё ещё не находятся.\n")
+                print(
+                    "👆 Сравните с FEATURE_MAPPING, если признаки всё ещё не находятся.\n"
+                )
                 debug_done = True
             except Exception:
                 pass

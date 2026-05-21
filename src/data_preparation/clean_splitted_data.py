@@ -6,7 +6,7 @@
 - приведение всех значений к числовому типу
 - замена inf / NaN на 0
 
-Работает итеративно по чанкам, не загружая весь файл в память.
+Работает итеративно, не загружая весь файл в память.
 """
 
 import re
@@ -36,7 +36,7 @@ def normalize_name(name: str) -> str:
 
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Применяет все шаги очистки к одному DataFrame."""
-    # # 1. Нормализация имён столбцов
+    # 1. Нормализация имён столбцов
     df.columns = [normalize_name(c) for c in df.columns]
 
     # 2. Бинаризация метки
@@ -61,9 +61,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean_file(file_path: Path) -> None:
-    """
-    Почанково очищает CSV-файл и перезаписывает его.
-    """
+    """Очищает CSV-файл и перезаписывает его."""
     logger.info(f"Очистка {file_path.name} ...")
     tmp_path = file_path.with_suffix(".tmp")
 
@@ -73,7 +71,7 @@ def clean_file(file_path: Path) -> None:
             for chunk in reader:
                 cleaned = clean_dataframe(chunk)
                 # Первый чанк записываем с заголовком, последующие – без
-                cleaned.to_csv(tmp_path, mode='a', index=False, header=first_chunk)
+                cleaned.to_csv(tmp_path, mode="a", index=False, header=first_chunk)
                 first_chunk = False
 
         # Замена исходного файла очищенным

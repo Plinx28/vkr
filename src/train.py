@@ -10,15 +10,14 @@ import json
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
-from utils import (set_seed, timer, load_data_from_dir)
+from utils import set_seed, timer, load_data_from_dir
 from models.logistic_regression import LogisticRegressionModel
 from models.xgboost_model import XGBoostModel
 from models.mlp_model import MLPModel
 from models.autoencoder_model import AutoencoderModel
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -32,13 +31,17 @@ MODEL_REGISTRY = {
     "autoencoder": AutoencoderModel,
 }
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, required=True, choices=MODEL_REGISTRY.keys())
+    parser.add_argument(
+        "--model", type=str, required=True, choices=MODEL_REGISTRY.keys()
+    )
     parser.add_argument("--params", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="models")
     parser.add_argument("--seed", type=int, default=42)
     return parser.parse_args()
+
 
 def plot_training_history(history, model_name, save_dir):
     if history is None:
@@ -65,6 +68,7 @@ def plot_training_history(history, model_name, save_dir):
     plt.savefig(save_dir / f"{model_name}_history.png", dpi=150)
     plt.close()
     logger.info(f"Training plots saved to {save_dir}")
+
 
 def main():
     args = parse_args()
@@ -98,6 +102,7 @@ def main():
         plot_training_history(history, model.name, Path("reports/figures"))
 
     logger.info("Training finished.")
+
 
 if __name__ == "__main__":
     main()

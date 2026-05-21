@@ -18,7 +18,7 @@ VAL_DIR = Path("data/val")
 TEST_DIR = Path("data/test")
 SCALER_PATH = Path("data/scaler.pkl")
 
-CHUNK_SIZE = 500_000                     # размер чанка для чтения CSV
+CHUNK_SIZE = 500_000  # размер чанка для чтения CSV
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -100,7 +100,11 @@ def main():
         logger.info(f"Scaler сохранён в {SCALER_PATH}")
 
     # 2. Применяем scaler к train, val, test
-    for subset_dir, subset_name in [(TRAIN_DIR, "train"), (VAL_DIR, "val"), (TEST_DIR, "test")]:
+    for subset_dir, subset_name in [
+        (TRAIN_DIR, "train"),
+        (VAL_DIR, "val"),
+        (TEST_DIR, "test"),
+    ]:
         logger.info(f"=== Обработка {subset_name} ===")
         transform_and_save(subset_dir, scaler)
 

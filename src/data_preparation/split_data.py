@@ -23,8 +23,7 @@ TEST_DIR = Path("data/test")
 RANDOM_STATE = 42
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -45,17 +44,11 @@ def split_file(csv_path: Path) -> None:
 
     # 1. Отделить test (20%) стратифицированно
     X_temp, X_test, y_temp, y_test = train_test_split(
-        X, y,
-        test_size=0.2,
-        random_state=RANDOM_STATE,
-        stratify=y
+        X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
     )
     # 2. Из оставшихся 80% отделить validation (25% от temp -> 20% от исходного)
     X_train, X_val, y_train, y_val = train_test_split(
-        X_temp, y_temp,
-        test_size=0.25,
-        random_state=RANDOM_STATE,
-        stratify=y_temp
+        X_temp, y_temp, test_size=0.25, random_state=RANDOM_STATE, stratify=y_temp
     )
 
     # Формируем итоговые DataFrame'ы
@@ -83,7 +76,22 @@ def split_file(csv_path: Path) -> None:
     )
 
     # Явная очистка памяти
-    del df, X, y, X_temp, X_test, y_temp, y_test, X_train, X_val, y_train, y_val, train_df, val_df, test_df
+    del (
+        df,
+        X,
+        y,
+        X_temp,
+        X_test,
+        y_temp,
+        y_test,
+        X_train,
+        X_val,
+        y_train,
+        y_val,
+        train_df,
+        val_df,
+        test_df,
+    )
     gc.collect()
 
 

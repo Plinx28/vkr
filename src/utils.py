@@ -15,15 +15,16 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    roc_auc_score, average_precision_score, matthews_corrcoef
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    average_precision_score,
+    matthews_corrcoef,
 )
 
 logger = logging.getLogger(__name__)
 
-# ──────────────────────────────────────
-# Seed
-# ──────────────────────────────────────
 
 def set_seed(seed: int = 42) -> None:
     random.seed(seed)
@@ -31,9 +32,6 @@ def set_seed(seed: int = 42) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
     tf.random.set_seed(seed)
 
-# ──────────────────────────────────────
-# Таймеры
-# ──────────────────────────────────────
 
 @contextmanager
 def timer(name: str = "Operation", log_level: int = logging.INFO):
@@ -45,16 +43,20 @@ def timer(name: str = "Operation", log_level: int = logging.INFO):
         elapsed = time.perf_counter() - start
         logger.log(log_level, f"{name} completed in {elapsed:.3f} seconds")
 
+
 class Timer:
     def __init__(self):
         self.start_time = None
         self.end_time = None
+
     def start(self):
         self.start_time = time.perf_counter()
         return self
+
     def stop(self):
         self.end_time = time.perf_counter()
         return self.elapsed
+
     @property
     def elapsed(self) -> float:
         if self.start_time is None:
@@ -62,14 +64,11 @@ class Timer:
         end = self.end_time if self.end_time is not None else time.perf_counter()
         return end - self.start_time
 
-# ──────────────────────────────────────
-# Метрики
-# ──────────────────────────────────────
 
-def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray,
-                    y_proba: Optional[np.ndarray] = None) -> Dict[str, float]:
+def compute_metrics(
+    y_true: np.ndarray, y_pred: np.ndarray, y_proba: Optional[np.ndarray] = None
+) -> Dict[str, float]:
     metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
         "recall": recall_score(y_true, y_pred, zero_division=0),
         "f1": f1_score(y_true, y_pred, zero_division=0),
@@ -80,20 +79,17 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray,
         metrics["pr_auc"] = average_precision_score(y_true, y_proba)
     return metrics
 
+
 def print_metrics(metrics: Dict[str, float], title: str = "Metrics") -> None:
     print(f"\n{title}")
     print("-" * 40)
     for name, value in metrics.items():
         print(f"{name:12s}: {value:.4f}")
 
-# ──────────────────────────────────────
-# Загрузка всех CSV из папки
-# ──────────────────────────────────────
 
 def load_data_from_dir(data_dir: Path) -> tuple[np.ndarray, np.ndarray]:
     """
     Загружает все CSV-файлы из указанной папки в один массив X и y.
-    Файлы сортируются по имени.
     """
     csv_files = sorted(data_dir.glob("*.csv"))
     if not csv_files:

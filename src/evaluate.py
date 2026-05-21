@@ -15,8 +15,7 @@ from models.mlp_model import MLPModel
 from models.autoencoder_model import AutoencoderModel
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -27,13 +26,21 @@ MODEL_REGISTRY = {
     "autoencoder": AutoencoderModel,
 }
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate trained models on test data.")
-    parser.add_argument("--model", type=str, default="all",
-                        choices=list(MODEL_REGISTRY.keys()) + ["all"],
-                        help="Model to evaluate (default: all).")
+    parser = argparse.ArgumentParser(
+        description="Evaluate trained models on test data."
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="all",
+        choices=list(MODEL_REGISTRY.keys()) + ["all"],
+        help="Model to evaluate (default: all).",
+    )
     parser.add_argument("--output_dir", type=str, default="reports/metrics")
     return parser.parse_args()
+
 
 def evaluate_model(model_name, model, X_test, y_test):
     logger.info(f"Evaluating {model_name}...")
@@ -49,6 +56,7 @@ def evaluate_model(model_name, model, X_test, y_test):
     metrics["inference_time_sec"] = round(elapsed, 4)
     metrics["model"] = model_name
     return metrics
+
 
 def main():
     args = parse_args()
@@ -106,6 +114,7 @@ def main():
         logger.info(f"Summary saved to {out_file}")
     else:
         logger.warning("No models evaluated.")
+
 
 if __name__ == "__main__":
     main()
