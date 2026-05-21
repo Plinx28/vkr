@@ -128,16 +128,10 @@ def main():
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     # # Сырые данные (raw) – строковые метки
-    # if raw_dir.exists():
-    #     analyze_labels_in_directory(raw_dir, "raw", figures_dir, analysis_dir)
-    # else:
-    #     logger.warning(f"Папка {raw_dir} не найдена, анализ raw пропущен.")
-
-    # # Обработанные данные (processed) – бинарные метки 0/1
-    # if processed_dir.exists():
-    #     analyze_labels_in_directory(processed_dir, "processed", figures_dir, analysis_dir)
-    # else:
-    #     logger.warning(f"Папка {processed_dir} не найдена, анализ processed пропущен.")
+    if raw_dir.exists():
+        analyze_labels_in_directory(raw_dir, "raw", figures_dir, analysis_dir)
+    else:
+        logger.warning(f"Папка {raw_dir} не найдена, анализ raw пропущен.")
 
     # Данные после разделения train/val/test
     for subset_name, subset_dir in [("train", train_dir), ("val", val_dir), ("test", test_dir)]:

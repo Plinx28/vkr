@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 # ──────────────────────────────────────────────────────────────────
 # КОНФИГУРАЦИЯ
 # ──────────────────────────────────────────────────────────────────
-SOURCE_DIR = Path("data/raw")
+SOURCE_DIR = Path("data/cut_features")
 TRAIN_DIR = Path("data/train")
 VAL_DIR = Path("data/val")
 TEST_DIR = Path("data/test")
@@ -35,7 +35,7 @@ def split_file(csv_path: Path) -> None:
     и сохраняет результат в соответствующие папки.
     """
     logger.info(f"Обрабатываю {csv_path.name} ...")
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(csv_path, sep=";")
     if "Label" not in df.columns:
         logger.warning(f"Колонка 'Label' не найдена в {csv_path.name}, пропускаю.")
         return
@@ -43,14 +43,14 @@ def split_file(csv_path: Path) -> None:
     y = df["Label"]
     X = df.drop(columns=["Label"])
 
-    # 1. Отделяем test (20%) стратифицированно
+    # 1. Отделить test (20%) стратифицированно
     X_temp, X_test, y_temp, y_test = train_test_split(
         X, y,
         test_size=0.2,
         random_state=RANDOM_STATE,
         stratify=y
     )
-    # 2. Из оставшихся 80% отделяем validation (25% от temp -> 20% от исходного)
+    # 2. Из оставшихся 80% отделить validation (25% от temp -> 20% от исходного)
     X_train, X_val, y_train, y_val = train_test_split(
         X_temp, y_temp,
         test_size=0.25,

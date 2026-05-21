@@ -19,16 +19,16 @@ class MLPModel(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(name="mlp", **kwargs)
         default_params: Dict[str, Any] = {
-            "hidden_layers": [128, 64, 32],
-            "dropout_rate": 0.3,
+            "hidden_layers": [64, 32, 16],
+            "dropout_rate": 0.2,
             "activation": "relu",
             "output_activation": "sigmoid",
             "optimizer": "adam",
             "learning_rate": 0.001,
             "batch_size": 256,
-            "epochs": 15,
-            "early_stopping_patience": 3,
-            "focal_gamma": 2.0,
+            "epochs": 10,
+            "early_stopping_patience": 2,
+            "focal_gamma": 3.0,
             "class_weight": None,
         }
         default_params.update(kwargs)

@@ -6,8 +6,6 @@
 import json
 import numpy as np
 from pathlib import Path
-from typing import Optional
-import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, Model
 import pandas as pd
@@ -22,16 +20,16 @@ class AutoencoderModel(BaseModel):
         super().__init__(name="autoencoder", **kwargs)
         default_params = {
             "encoding_dim": 32,
-            "hidden_layers": [128, 64],
+            "hidden_layers": [32, 16],
             "dropout_rate": 0.2,
             "activation": "relu",
             "output_activation": "sigmoid",
             "reconstruction_weight": 0.5,
             "optimizer": "adam",
-            "learning_rate": 0.001,
+            "learning_rate": 0.01,
             "batch_size": 256,
-            "epochs": 50,
-            "early_stopping_patience": 10,
+            "epochs": 12,
+            "early_stopping_patience": 2,
             "focal_gamma": 2.0,        # не используется
         }
         default_params.update(kwargs)

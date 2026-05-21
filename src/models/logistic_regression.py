@@ -30,7 +30,6 @@ class LogisticRegressionModel(BaseModel):
             "tol": 1e-4,               # Критерий остановки по изменению коэффициентов
             "class_weight": "balanced", # Автоматическое взвешивание классов
             "random_state": 42,
-            "n_jobs": -1,              # Использовать все ядра CPU
             "verbose": 0,
         }
         default_params.update(kwargs)

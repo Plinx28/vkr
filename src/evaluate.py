@@ -1,5 +1,5 @@
 """
-Оценка обученных моделей на тестовой выборке из data/splits.
+Оценка обученных моделей на тестовой выборке (data/test).
 """
 
 import argparse
@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 import pandas as pd
 
-from utils import set_seed, get_dataset_splits, compute_metrics
+from utils import set_seed, load_data_from_dir, compute_metrics
 from models.logistic_regression import LogisticRegressionModel
 from models.xgboost_model import XGBoostModel
 from models.mlp_model import MLPModel
@@ -28,17 +28,14 @@ MODEL_REGISTRY = {
 }
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate trained models on test split.")
+    parser = argparse.ArgumentParser(description="Evaluate trained models on test data.")
     parser.add_argument("--model", type=str, default="all",
                         choices=list(MODEL_REGISTRY.keys()) + ["all"],
                         help="Model to evaluate (default: all).")
-    parser.add_argument("--max_samples", type=int, default=None,
-                        help="Limit test samples (speeds up evaluation).")
     parser.add_argument("--output_dir", type=str, default="reports/metrics")
     return parser.parse_args()
 
 def evaluate_model(model_name, model, X_test, y_test):
-    """Вычисляет метрики и время инференса."""
     logger.info(f"Evaluating {model_name}...")
     start = time.perf_counter()
     y_pred = model.predict(X_test)
@@ -57,12 +54,15 @@ def main():
     args = parse_args()
     set_seed(42)
 
-    logger.info("Loading cached test split...")
-    _, X_test, _, y_test = get_dataset_splits(force_reload=False,
-                                              max_samples=args.max_samples)
+    test_dir = Path("data/test")
+    if not test_dir.exists():
+        logger.error(f"Test directory {test_dir} not found.")
+        return
+
+    logger.info("Loading test data...")
+    X_test, y_test = load_data_from_dir(test_dir)
     logger.info(f"Test set size: {X_test.shape[0]}")
 
-    # Определяем модели для оценки
     models_dir = Path("models")
     if args.model != "all":
         model_names = [args.model]
