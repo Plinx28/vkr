@@ -1,9 +1,5 @@
 """
 Модуль анализа распределения меток (Label) в данных сетевого трафика.
-Универсально работает с любыми папками, содержащими CSV-файлы со столбцом 'Label'.
-Строит столбчатую диаграмму с логарифмической шкалой для всех уникальных значений меток.
-Сохраняет числовую сводку в CSV и график в PNG.
-Теперь также анализирует train/val/test после разделения.
 """
 
 import logging
@@ -43,9 +39,9 @@ def analyze_labels_in_directory(
     all_labels = []
     for fpath in csv_files:
         try:
-            # Загружаем только столбец Label для минимизации потребления памяти
+            # Загрузка только столбца Label для минимизации потребления памяти
             df = pd.read_csv(fpath, usecols=["Label"])
-            # Приводим к строковому типу для единообразия, убираем пробелы по краям
+            # Приведение к строковому типу для единообразия, убираем пробелы по краям
             labels = df["Label"].astype(str).str.strip()
             all_labels.append(labels)
         except Exception as e:
@@ -55,19 +51,19 @@ def analyze_labels_in_directory(
         logger.warning("Не удалось загрузить данные.")
         return
 
-    # Объединяем все метки в одну серию
+    # Объединение всех меток в одну серию
     all_labels_series = pd.concat(all_labels, ignore_index=True)
-    # Подсчитываем частоты и сортируем по убыванию
+    # Подсчет частоты и сортировка по убыванию
     vc = all_labels_series.value_counts()
 
-    # ── Сохранение CSV ──
+    # Сохранение CSV
     csv_path = analysis_dir / f"{output_prefix}_class_distribution.csv"
     vc_df = vc.reset_index()
     vc_df.columns = ["Label", "Count"]
     vc_df.to_csv(csv_path, index=False)
     logger.info(f"Сводка сохранена: {csv_path}")
 
-    # ── Построение диаграммы ──
+    # Построение диаграммы
     labels = vc_df["Label"].tolist()
     counts = vc_df["Count"].tolist()
 

@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any
 import numpy as np
 from pathlib import Path
-from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import precision_recall_curve, f1_score, matthews_corrcoef
 
 
 class BaseModel(ABC):
@@ -53,3 +53,18 @@ class BaseModel(ABC):
     @abstractmethod
     def load(cls, path: Path) -> "BaseModel":
         pass
+
+    def optimize_threshold(self, X_val: np.ndarray, y_val: np.ndarray, metric: str = "f1") -> float:
+        """Подбирает порог, максимизирующий F1 или MCC на валидации."""
+        probas = self.predict_proba(X_val)
+        thresholds = np.arange(0.1, 0.9, 0.01)
+        scores = []
+        for thr in thresholds:
+            preds = (probas >= thr).astype(int)
+            if metric == "f1":
+                scores.append(f1_score(y_val, preds))
+            elif metric == "mcc":
+                scores.append(matthews_corrcoef(y_val, preds))
+        best_idx = np.argmax(scores)
+        self.threshold_ = thresholds[best_idx]
+        return self.threshold_

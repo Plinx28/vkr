@@ -1,12 +1,8 @@
-#!/usr/bin/env python3
 """
 Очистка уже разбитых CSV-файлов в data/train, data/val, data/test:
 - удаление ненужных колонок (IP, Flow ID, Timestamp и др.)
 - бинаризация метки (BENIGN → 0, остальное → 1)
 - приведение всех значений к числовому типу
-- замена inf / NaN на 0
-
-Работает итеративно, не загружая весь файл в память.
 """
 
 import re
@@ -15,10 +11,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-# ──────────────────────────────────────────────────────────────────
-# НАСТРОЙКИ
-# ──────────────────────────────────────────────────────────────────
-# Папки, которые нужно очистить
+
 TARGET_DIRS = [Path("data/train"), Path("data/val"), Path("data/test")]
 
 CHUNK_SIZE = 500_000
@@ -53,7 +46,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df.replace([np.inf, -np.inf], np.nan, inplace=True)
     df.fillna(0, inplace=True)
 
-    # 6. Гарантируем целочисленный тип метки (если она есть)
+    # 5. Гарантируем целочисленный тип метки (если она есть)
     if "Label" in df.columns:
         df["Label"] = df["Label"].astype(int)
 

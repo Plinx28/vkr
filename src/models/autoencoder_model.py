@@ -1,6 +1,5 @@
 """
 Автоэнкодер с классификационной головой и бинарной кросс‑энтропией.
-Исправлен EarlyStopping (mode='min'), метка y приводится к (N,1).
 """
 
 import json
@@ -20,7 +19,7 @@ class AutoencoderModel(BaseModel):
         super().__init__(name="autoencoder", **kwargs)
         default_params = {
             "encoding_dim": 32,
-            "hidden_layers": [64, 32],
+            "hidden_layers": [32, 16],
             "dropout_rate": 0.2,
             "activation": "relu",
             "output_activation": "sigmoid",
@@ -92,7 +91,11 @@ class AutoencoderModel(BaseModel):
                 "classification": 1.0 - self.params["reconstruction_weight"]
             },
             metrics={
-                "classification": ["accuracy"]
+                "classification": [
+                    keras.metrics.AUC(name="auc"),
+                    keras.metrics.Precision(name="precision"),
+                    keras.metrics.Recall(name="recall")
+                ]
             }
         )
 

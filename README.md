@@ -47,7 +47,7 @@ TensorBoard для визуализации обучения нейросете�
 `python src/data_preparation.py`
 
 <p>Затем данные разделяются на выборки train, val, test</p>
-'python src/split_data.py`
+`python src/split_data.py`
 
 # Запуск обучения
 

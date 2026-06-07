@@ -17,28 +17,28 @@ FEATURE_MAPPING = {
         "Total Bwd Packets",
         "Total_Bwd_Packets",
     ],
-    # === Размеры пакетов (только fwd — наиболее информативные) ===
+    # === Размеры пакетов ===
     "Fwd Packet Length Mean": [
         "Fwd Packet Length Mean",
         "Fwd Pkt Len Mean",
         "Fwd Packet Length Avg",
     ],
     "Fwd Packet Length Std": ["Fwd Packet Length Std", "Fwd Pkt Len Std"],
-    # === Временные (направленные IAT, без агрегированного Flow IAT) ===
+    # === Временные ===
     "Fwd IAT Mean": ["Fwd IAT Mean", "Fwd IAT Avg"],
     "Bwd IAT Mean": ["Bwd IAT Mean", "Bwd IAT Avg"],
-    # === Скорости (общие — достаточно для большинства атак) ===
+    # === Скорости ===
     "Flow Bytes/s": ["Flow Bytes/s", "Flow Byts/s", "Flow B/s"],
     "Flow Packets/s": ["Flow Packets/s", "Flow Pkts/s", "Flow P/s"],
-    # === TCP-флаги (критичны для обнаружения сканирования/эксплойтов) ===
+    # === TCP-флаги ===
     "FIN Flag Cnt": ["FIN Flag Cnt", "FIN Flag Count"],
     "SYN Flag Cnt": ["SYN Flag Cnt", "SYN Flag Count"],
     "RST Flag Cnt": ["RST Flag Cnt", "RST Flag Count"],
     "ACK Flag Count": ["ACK Flag Cnt", "ACK Flag Count"],
-    # === Активность соединения (уникальная информация о поведении) ===
+    # === Активность соединения ===
     "Active Mean": ["Active Mean", "Active Avg"],
     "Idle Mean": ["Idle Mean", "Idle Avg"],
-    # === TCP window (важно для fingerprinting) ===
+    # === TCP window ===
     "FWD Init Win Bytes": [
         "FWD Init Win Bytes",
         "Fwd Init Win Byts",

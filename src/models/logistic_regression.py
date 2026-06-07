@@ -1,8 +1,3 @@
-"""
-Логистическая регрессия с регуляризацией и автоматическим взвешиванием классов.
-Использует solver 'saga' для поддержки больших данных и быстрой сходимости.
-"""
-
 import joblib
 import numpy as np
 from pathlib import Path
@@ -19,18 +14,17 @@ class LogisticRegressionModel(BaseModel):
         super().__init__(name="logistic_regression", **kwargs)
 
         # Параметры по умолчанию, подобранные для:
-        # - дисбаланса классов (class_weight='balanced')
         # - предотвращения переобучения (регуляризация L2 с C=1.0)
         # - быстрой сходимости на больших данных (solver='saga', tol=1e-4)
         default_params: Dict[str, Any] = {
             "penalty": "l2",           # L2-регуляризация для устойчивости
             "C": 1.0,                  # Сила регуляризации (меньше C → сильнее регуляризация)
             "solver": "saga",          # Поддерживает L1/L2, хорошо работает на больших выборках
-            "max_iter": 1000,          # Максимальное число итераций
-            "tol": 1e-4,               # Критерий остановки по изменению коэффициентов
+            "max_iter": 5000,          # Максимальное число итераций
+            "tol": 1e-5,               # Критерий остановки по изменению коэффициентов
             "class_weight": "balanced", # Автоматическое взвешивание классов
             "random_state": 42,
-            "verbose": 0,
+            "verbose": 1,
         }
         default_params.update(kwargs)
         self.params = default_params

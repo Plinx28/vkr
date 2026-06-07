@@ -57,7 +57,7 @@ class MLPModel(BaseModel):
         model.compile(
             optimizer=optimizer,
             loss=loss,
-            metrics=["accuracy", keras.metrics.AUC(name="auc"),
+            metrics=[keras.metrics.AUC(name="auc"),
                      keras.metrics.Precision(name="precision"),
                      keras.metrics.Recall(name="recall")]
         )
@@ -78,7 +78,7 @@ class MLPModel(BaseModel):
         cb_list = []
         if X_val is not None and y_val is not None:
             early_stop = callbacks.EarlyStopping(
-                monitor="val_loss", patience=self.params["early_stopping_patience"],
+                monitor="val_auc", patience=self.params["early_stopping_patience"],
                 restore_best_weights=True
             )
             cb_list.append(early_stop)

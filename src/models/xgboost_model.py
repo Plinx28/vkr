@@ -15,18 +15,18 @@ class XGBoostModel(BaseModel):
     """Модель градиентного бустинга над деревьями решений."""
     def __init__(self, **kwargs):
         super().__init__(name="xgboost", **kwargs)
-        # Параметры по умолчанию, оптимизированные для дисбаланса
         default_params = {
             "n_estimators": 200,
-            "max_depth": 6,
-            "learning_rate": 0.1,
+            "max_depth": 7,
+            "learning_rate": 0.01,
             "subsample": 0.8,
             "colsample_bytree": 0.8,
             "scale_pos_weight": None,  # Будет вычислен автоматически при fit
+            "early_stopping_rounds": 5,
             "random_state": 42,
             "use_label_encoder": False,
-            "eval_metric": "logloss",
-            "verbosity": 0,
+            "eval_metric": ["logloss", "logloss"],
+            "verbosity": 1,
         }
         default_params.update(kwargs)
         self.params = default_params

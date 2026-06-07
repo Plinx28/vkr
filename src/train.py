@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 """
 Скрипт обучения моделей на полных данных из data/train, с валидацией на data/val.
-Тестовые данные не используются (оставлены для evaluate.py).
 """
 
 import argparse
@@ -95,6 +93,7 @@ def main():
     # Обучение
     with timer("Training"):
         history = model.fit(X_train, y_train, X_val, y_val, verbose=1)
+        model.optimize_threshold(X_val, y_val)
 
     model.save(output_path)
 

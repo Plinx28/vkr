@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 MODEL_REGISTRY = {
-    "logistic_regression": LogisticRegressionModel,
+    "lr": LogisticRegressionModel,
     "xgboost": XGBoostModel,
     "mlp": MLPModel,
     "autoencoder": AutoencoderModel,
