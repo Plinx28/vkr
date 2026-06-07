@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_REGISTRY = {
     "lr": LogisticRegressionModel,
-    "logistic_regression": LogisticRegressionModel,
+    "lr": LogisticRegressionModel,
     "xgb": XGBoostModel,
     "xgboost": XGBoostModel,
     "mlp": MLPModel,

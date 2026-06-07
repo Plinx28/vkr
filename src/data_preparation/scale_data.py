@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def fit_scaler_on_train(train_dir: Path) -> StandardScaler:
     """
-    Постепенно (чанками) читает все CSV из train_dir, извлекает признаки
+    Постепенно читает все CSV из train_dir, извлекает признаки
     (все столбцы, кроме 'Label') и обучает StandardScaler.
     """
     scaler = StandardScaler()

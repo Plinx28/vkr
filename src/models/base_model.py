@@ -36,15 +36,6 @@ class BaseModel(ABC):
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         pass
 
-    def tune_threshold(self, X_val: np.ndarray, y_val: np.ndarray) -> float:
-        probas = self.predict_proba(X_val)
-        prec, rec, thresh = precision_recall_curve(y_val, probas)
-        thresh = np.append(thresh, 1.0)
-        f1s = 2 * (prec * rec) / (prec + rec + 1e-10)
-        best = np.argmax(f1s)
-        self.threshold_ = thresh[best]
-        return self.threshold_
-
     @abstractmethod
     def save(self, path: Path) -> None:
         pass

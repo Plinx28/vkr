@@ -1,7 +1,7 @@
-import pandas as pd
-import os
 import glob
-import numpy as np
+import os
+
+import pandas as pd
 
 # ================= НАСТРОЙКИ =================
 RAW_DIR = "data/raw"
@@ -48,30 +48,23 @@ FEATURE_MAPPING = {
     "Label": ["Label", " label", "LABEL", "Label "],
 }
 
-# =============================================
-
 
 def process_csv(input_path, output_path, mapping):
     """Читает, сопоставляет имена, обрезает, преобразует метку и сохраняет."""
     try:
         # 1. Автоопределение разделителя и кодировки
-        for sep in [";", ",", "\t"]:
-            sep = ","
-            try:
-                df = pd.read_csv(
-                    input_path,
-                    sep=sep,
-                    on_bad_lines="skip",
-                    encoding="utf-8-sig",
-                    nrows=2,
-                )
-                if len(df.columns) > 5:  # Если прочиталось адекватное кол-во столбцов
-                    df = pd.read_csv(
-                        input_path, sep=sep, on_bad_lines="skip", encoding="utf-8-sig"
-                    )
-                    break
-            except:
-                continue
+        sep = ","
+        df = pd.read_csv(
+            input_path,
+            sep=sep,
+            on_bad_lines="skip",
+            encoding="utf-8-sig",
+            nrows=2,
+        )
+        if len(df.columns) > 5:
+            df = pd.read_csv(
+                input_path, sep=sep, on_bad_lines="skip", encoding="utf-8-sig"
+            )
         else:
             raise ValueError("Не удалось определить разделитель файла")
 
@@ -94,10 +87,10 @@ def process_csv(input_path, output_path, mapping):
                 missing_features.append(standard)
 
         if missing_features:
-            print(f"  ⚠️  Отсутствуют признаки: {missing_features}")
+            print(f"Отсутствуют признаки: {missing_features}")
 
         if not actual_to_standard:
-            print("  ❌ Ни один признак не найден. Пропускаю файл.")
+            print("Ни один признак не найден. Пропуск файла.")
             return 0
 
         # 4. Выбор и переименование
@@ -105,30 +98,26 @@ def process_csv(input_path, output_path, mapping):
         df_cut = df[cols_to_keep].copy()
         df_cut.rename(columns=actual_to_standard, inplace=True)
 
-        # 6. Замена inf на NaN (стандарт для CICFlowMeter)
-        df_cut.replace([np.inf, -np.inf], np.nan, inplace=True)
-
-        # 7. Сохранение
+        # 5. Сохранение
         df_cut.to_csv(output_path, index=False, sep=";")
         return len(df_cut)
 
     except Exception as e:
-        print(f"  ❌ Ошибка: {e}")
+        print(f"Ошибка: {e}")
         return 0
 
 
 # ================= ОСНОВНОЙ ЦИКЛ =================
-print("🔍 Поиск CSV файлов в data/raw...")
+print("Поиск CSV файлов в data/raw...")
 csv_files = glob.glob(os.path.join(RAW_DIR, "*.csv"))
 
 if not csv_files:
-    print("❌ Файлы .csv не найдены в папке data/raw. Проверьте путь.")
+    print("Файлы .csv не найдены в папке data/raw. Проверьте путь.")
 else:
-    print(f"📂 Найдено файлов: {len(csv_files)}\n")
+    print(f"Найдено файлов: {len(csv_files)}\n")
     total_rows = 0
 
-    # Отладочный вывод для первого файла
-    debug_done = False
+    debug_done = False # Отладочный вывод для первого файла
 
     for i, filepath in enumerate(csv_files, 1):
         filename = os.path.basename(filepath)
@@ -146,12 +135,11 @@ else:
                 print(f"\n🔎 Реальные заголовки в файле {filename}:")
                 print(list(sample.columns))
                 print(
-                    "👆 Сравните с FEATURE_MAPPING, если признаки всё ещё не находятся.\n"
+                    "Сравните с FEATURE_MAPPING, если признаки всё ещё не находятся.\n"
                 )
                 debug_done = True
             except Exception:
                 pass
 
-    print("\n✅ Готово!")
-    print(f"📊 Всего обработано строк: {total_rows}")
-    print(f"📁 Результаты сохранены в: {os.path.abspath(OUT_DIR)}")
+    print(f"Всего обработано строк: {total_rows}")
+    print(f"Результаты сохранены в: {os.path.abspath(OUT_DIR)}")
