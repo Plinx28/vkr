@@ -45,6 +45,7 @@ def parse_args():
 
 def evaluate_model(model_name, model, X_test, y_test):
     logger.info(f"Evaluating {model_name}...")
+    logger.info(f"Threshold {model.threshold_}...")
     start = time.perf_counter()
     y_pred = model.predict(X_test)
     if hasattr(model, "predict_proba"):

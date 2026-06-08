@@ -15,17 +15,18 @@ class LogisticRegressionModel(BaseModel):
 
         default_params: Dict[str, Any] = {
             "penalty": "l2",           # L2-регуляризация для устойчивости
-            "C": 1.0,                  # Сила регуляризации (меньше C → сильнее регуляризация)
-            "solver": "saga",          # Поддерживает L1/L2, хорошо работает на больших выборках
+            "C": 20.0,                  # Сила регуляризации (меньше C → сильнее регуляризация)
+            "solver": "lbfgs",
             "max_iter": 10000,          # Максимальное число итераций
-            "tol": 1e-4,               # Критерий остановки по изменению коэффициентов
-            "class_weight": "balanced", # Автоматическое взвешивание классов
+            "tol": 1e-3,               # Критерий остановки по изменению коэффициентов
+            "class_weight": None,
             "random_state": 42,
             "verbose": 1,
         }
         default_params.update(kwargs)
         self.params = default_params
         self._input_shape = None
+        self.threshold_ = 0.59
 
     def build(self, input_shape: int, **kwargs) -> None:
         """Инициализация sklearn-классификатора."""
@@ -44,13 +45,13 @@ class LogisticRegressionModel(BaseModel):
         self.model.fit(X_train, y_train)
         self.is_fitted = True
 
-        # Логируем число итераций, если доступно
         if hasattr(self.model, 'n_iter_'):
             print(f"[LR] Converged in {self.model.n_iter_[0]} iterations.")
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         self._check_fitted()
-        return self.model.predict(X)
+        proba = self.predict_proba(X)
+        return (proba >= self.threshold_).astype(int)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         self._check_fitted()
@@ -59,7 +60,6 @@ class LogisticRegressionModel(BaseModel):
     def save(self, path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
         model_path = path / "model.joblib"
-        # Сохраняем также input_shape для информации
         data = {
             "model": self.model,
             "params": self.params,

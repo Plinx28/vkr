@@ -59,4 +59,5 @@ class BaseModel(ABC):
                 scores.append(matthews_corrcoef(y_val, preds))
         best_idx = np.argmax(scores)
         self.threshold_ = thresholds[best_idx]
+        print(f"optimized threshold {self.threshold_}")
         return self.threshold_

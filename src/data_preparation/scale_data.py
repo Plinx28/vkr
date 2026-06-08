@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Масштабирование уже разбитых данных с помощью StandardScaler.
-Scaler обучается только на data/train, применяется ко всем трём наборам.
+Масштабирование с помощью StandardScaler.
 """
 
 import logging
@@ -28,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def fit_scaler_on_train(train_dir: Path) -> StandardScaler:
     """
-    Постепенно читает все CSV из train_dir, извлекает признаки
+    Читает все CSV из train_dir, извлекает признаки
     (все столбцы, кроме 'Label') и обучает StandardScaler.
     """
     scaler = StandardScaler()
@@ -85,13 +84,13 @@ def transform_and_save(data_dir: Path, scaler: StandardScaler) -> None:
 
 
 def main():
-    # Проверяем наличие папок
+    # 0. Проверка на наличие папок
     for d in [TRAIN_DIR, VAL_DIR, TEST_DIR]:
         if not d.exists():
             logger.error(f"Папка {d} не найдена. Сначала выполните разбиение данных.")
             return
 
-    # 1. Обучаем scaler (или загружаем, если уже есть)
+    # 1. Обучение scaler (или его загрузка, если уже обучен)
     if SCALER_PATH.exists():
         logger.info("Загружаю существующий scaler")
         scaler = joblib.load(SCALER_PATH)
@@ -100,7 +99,7 @@ def main():
         joblib.dump(scaler, SCALER_PATH)
         logger.info(f"Scaler сохранён в {SCALER_PATH}")
 
-    # 2. Применяем scaler к train, val, test
+    # 2. Применение scaler к train, val, test
     for subset_dir, subset_name in [
         (TRAIN_DIR, "train"),
         (VAL_DIR, "val"),
