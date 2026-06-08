@@ -6,9 +6,10 @@ Scaler обучается только на data/train, применяется �
 
 import logging
 from pathlib import Path
+
+import joblib
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-import joblib
 
 # ──────────────────────────────────────────────────────────────────
 # КОНФИГУРАЦИЯ

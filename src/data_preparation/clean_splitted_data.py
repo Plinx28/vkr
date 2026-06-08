@@ -5,12 +5,12 @@
 - приведение всех значений к числовому типу
 """
 
-import re
 import logging
+import re
 from pathlib import Path
-import pandas as pd
-import numpy as np
 
+import numpy as np
+import pandas as pd
 
 TARGET_DIRS = [Path("data/train"), Path("data/val"), Path("data/test")]
 

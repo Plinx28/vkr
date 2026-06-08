@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 """
-Разбиение масштабированных данных из data/processed на train/val/test
-со стратификацией (60/20/20) без загрузки всех данных в память.
+Разбиение масштабированных данных из data/processed на train/val/test со стратификацией (60/20/20).
 
 Создаёт папки data/train, data/val, data/test и для каждого исходного файла
 записывает три файла с постфиксами _train.csv, _val.csv, _test.csv.
 """
 
-import logging
 import gc
+import logging
 from pathlib import Path
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-# ──────────────────────────────────────────────────────────────────
-# КОНФИГУРАЦИЯ
-# ──────────────────────────────────────────────────────────────────
 SOURCE_DIR = Path("data/cut_features")
 TRAIN_DIR = Path("data/train")
 VAL_DIR = Path("data/val")
