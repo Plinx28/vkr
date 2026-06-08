@@ -1,5 +1,5 @@
 """
-Разбиение масштабированных данных из data/processed на train/val/test со стратификацией (60/20/20).
+Разбиение данных на train/val/test со стратификацией (60/20/20).
 
 Создаёт папки data/train, data/val, data/test и для каждого исходного файла
 и записывает три файла с постфиксами _train.csv, _val.csv, _test.csv.
@@ -38,16 +38,16 @@ def split_file(csv_path: Path) -> None:
     y = df["Label"]
     X = df.drop(columns=["Label"])
 
-    # 1. Отделить test (20%) стратифицированно
+    # Отделить test (20%) стратифицированно
     X_temp, X_test, y_temp, y_test = train_test_split(
         X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y
     )
-    # 2. Из оставшихся 80% отделить validation (25% от temp -> 20% от исходного)
+    # Из оставшихся 80% отделить validation (25% от temp -> 20% от исходного)
     X_train, X_val, y_train, y_val = train_test_split(
         X_temp, y_temp, test_size=0.25, random_state=RANDOM_STATE, stratify=y_temp
     )
 
-    # Формируем итоговые DataFrame'ы
+    # Сформировать итоговые DataFrame'ы
     train_df = X_train.copy()
     train_df["Label"] = y_train
 
@@ -58,7 +58,7 @@ def split_file(csv_path: Path) -> None:
     test_df["Label"] = y_test
 
     # Имя файла без расширения, для создания новых имён
-    stem = csv_path.stem  # e.g. "02-03-2018"
+    stem = csv_path.stem
     # Замена дефисов на подчеркивания для единообразия (опционально)
     safe_name = stem.replace("-", "_")
 
@@ -81,7 +81,6 @@ def main():
     VAL_DIR.mkdir(parents=True, exist_ok=True)
     TEST_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Получаем все CSV-файлы из data/processed (исключая scaler.pkl, если он там)
     csv_files = sorted(SOURCE_DIR.glob("*.csv"))
     if not csv_files:
         logger.error(f"В {SOURCE_DIR} нет CSV-файлов для разбиения.")
