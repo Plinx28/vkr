@@ -63,7 +63,7 @@ def clean_file(file_path: Path) -> None:
         with pd.read_csv(file_path, chunksize=CHUNK_SIZE, low_memory=False) as reader:
             for chunk in reader:
                 cleaned = clean_dataframe(chunk)
-                # Первый чанк записываем с заголовком, последующие – без
+                # Первый чанк записывается с заголовком, последующие – без
                 cleaned.to_csv(tmp_path, mode="a", index=False, header=first_chunk)
                 first_chunk = False
 
@@ -72,7 +72,7 @@ def clean_file(file_path: Path) -> None:
     except Exception as e:
         logger.error(f"Ошибка при обработке {file_path.name}: {e}")
         if tmp_path.exists():
-            tmp_path.unlink()  # удаляем временный файл, если что-то пошло не так
+            tmp_path.unlink()  # удаление временного файла, если что-то пошло не так
 
 
 def main():

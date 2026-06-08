@@ -45,7 +45,7 @@ def fit_scaler_on_train(train_dir: Path) -> StandardScaler:
             X = chunk.drop(columns=["Label"])
             if X.empty:
                 continue
-            # Все столбцы уже должны быть числовыми (после очистки)
+            # Все столбцы уже должны быть числовыми
             scaler.partial_fit(X)
     logger.info("Обучение scaler завершено")
     return scaler
@@ -77,7 +77,6 @@ def transform_and_save(data_dir: Path, scaler: StandardScaler) -> None:
         if not output_chunks:
             continue
 
-        # Собираем все масштабированные чанки и перезаписываем файл
         full_df = pd.concat(output_chunks, ignore_index=True)
         full_df.to_csv(fpath, index=False)
         logger.info(f"Файл {fpath.name} обновлён")
