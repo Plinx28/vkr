@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
 """
 Разбиение масштабированных данных из data/processed на train/val/test со стратификацией (60/20/20).
 
 Создаёт папки data/train, data/val, data/test и для каждого исходного файла
-записывает три файла с постфиксами _train.csv, _val.csv, _test.csv.
+и записывает три файла с постфиксами _train.csv, _val.csv, _test.csv.
 """
 
 import gc
@@ -73,22 +72,7 @@ def split_file(csv_path: Path) -> None:
     )
 
     # Явная очистка памяти
-    del (
-        df,
-        X,
-        y,
-        X_temp,
-        X_test,
-        y_temp,
-        y_test,
-        X_train,
-        X_val,
-        y_train,
-        y_val,
-        train_df,
-        val_df,
-        test_df,
-    )
+    del (df, X, y, X_temp, X_test, y_temp, y_test, X_train, X_val, y_train, y_val, train_df, val_df, test_df)
     gc.collect()
 
 
