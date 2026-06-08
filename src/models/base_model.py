@@ -3,10 +3,11 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Any
-import numpy as np
 from pathlib import Path
-from sklearn.metrics import precision_recall_curve, f1_score, matthews_corrcoef
+from typing import Optional, Any
+
+import numpy as np
+from sklearn.metrics import f1_score, matthews_corrcoef
 
 
 class BaseModel(ABC):

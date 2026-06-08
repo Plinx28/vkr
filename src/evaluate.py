@@ -6,13 +6,14 @@ import argparse
 import logging
 import time
 from pathlib import Path
+
 import pandas as pd
 
-from utils import set_seed, load_data_from_dir, compute_metrics
-from models.logistic_regression import LogisticRegressionModel
-from models.xgboost_model import XGBoostModel
-from models.mlp_model import MLPModel
 from models.autoencoder_model import AutoencoderModel
+from models.logistic_regression import LogisticRegressionModel
+from models.mlp_model import MLPModel
+from models.xgboost_model import XGBoostModel
+from utils import set_seed, load_data_from_dir, compute_metrics
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

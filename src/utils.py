@@ -3,13 +3,13 @@
 callback метрик валидации, подбор порога.
 """
 
-import os
-import time
-import random
 import logging
+import os
+import random
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional, Dict
-from contextlib import contextmanager
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,6 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    roc_auc_score,
     average_precision_score,
     matthews_corrcoef,
 )
@@ -75,7 +74,6 @@ def compute_metrics(
         "mcc": matthews_corrcoef(y_true, y_pred),
     }
     if y_proba is not None:
-        metrics["roc_auc"] = roc_auc_score(y_true, y_proba)
         metrics["pr_auc"] = average_precision_score(y_true, y_proba)
     return metrics
 

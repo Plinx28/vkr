@@ -3,16 +3,18 @@
 """
 
 import argparse
-import logging
 import json
+import logging
 from pathlib import Path
-import pandas as pd
+
 import matplotlib.pyplot as plt
-from utils import set_seed, timer, load_data_from_dir
-from models.logistic_regression import LogisticRegressionModel
-from models.xgboost_model import XGBoostModel
-from models.mlp_model import MLPModel
+import pandas as pd
+
 from models.autoencoder_model import AutoencoderModel
+from models.logistic_regression import LogisticRegressionModel
+from models.mlp_model import MLPModel
+from models.xgboost_model import XGBoostModel
+from utils import set_seed, timer, load_data_from_dir
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 MODEL_REGISTRY = {
     "lr": LogisticRegressionModel,
-    "lr": LogisticRegressionModel,
+    "logistic_regression": LogisticRegressionModel,
     "xgb": XGBoostModel,
     "xgboost": XGBoostModel,
     "mlp": MLPModel,

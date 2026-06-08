@@ -3,11 +3,12 @@
 """
 
 import json
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 from tensorflow import keras
 from tensorflow.keras import layers, Model
-import pandas as pd
 
 from .base_model import BaseModel
 

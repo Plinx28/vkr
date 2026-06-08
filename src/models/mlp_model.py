@@ -3,13 +3,14 @@
 """
 
 import json
-import numpy as np
 from pathlib import Path
 from typing import Optional, Dict, Any
+
+import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, callbacks
-import pandas as pd
 
 from .base_model import BaseModel
 

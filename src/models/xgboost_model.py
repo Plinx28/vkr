@@ -2,10 +2,11 @@
 Реализация градиентного бустинга XGBoost.
 """
 
-import joblib
-import numpy as np
 from pathlib import Path
 from typing import Optional
+
+import joblib
+import numpy as np
 import xgboost as xgb
 
 from .base_model import BaseModel
