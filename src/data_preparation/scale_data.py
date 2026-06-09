@@ -9,15 +9,12 @@ import joblib
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-# ──────────────────────────────────────────────────────────────────
-# КОНФИГУРАЦИЯ
-# ──────────────────────────────────────────────────────────────────
 TRAIN_DIR = Path("data/train")
 VAL_DIR = Path("data/val")
 TEST_DIR = Path("data/test")
 SCALER_PATH = Path("data/scaler.pkl")
 
-CHUNK_SIZE = 500_000  # размер чанка для чтения CSV
+CHUNK_SIZE = 500_000  # единовременный объём данных для чтения CSV
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
@@ -26,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 def fit_scaler_on_train(train_dir: Path) -> StandardScaler:
     """
-    Читает все CSV из train_dir, извлекает признаки
-    (все столбцы, кроме 'Label') и обучает StandardScaler.
+    Читает все CSV из train_dir, извлекает признаки и обучает StandardScaler.
     """
     scaler = StandardScaler()
     csv_files = sorted(train_dir.glob("*.csv"))
