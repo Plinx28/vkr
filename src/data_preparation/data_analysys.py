@@ -68,7 +68,6 @@ def analyze_labels_in_directory(
     labels = vc_df["Label"].tolist()
     counts = vc_df["Count"].tolist()
 
-    # Цветовая схема: 'BENIGN' или '0' выделяем синим, остальное – оранжевым
     colors = []
     for lbl in labels:
         if lbl in ("BENIGN", "0", "benign"):

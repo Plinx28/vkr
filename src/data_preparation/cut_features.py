@@ -77,6 +77,7 @@ def process_csv(input_path, output_path):
             print(f"В {os.path.basename(input_path)} отсутствуют: {list(missing)}")
 
         df_cut = df[cols_to_keep].copy()
+        df_cut["Label"] = (df_cut["Label"] != "BENIGN").astype(int)
 
         # 4. Сохранение
         df_cut.to_csv(output_path, index=False, sep=";")
