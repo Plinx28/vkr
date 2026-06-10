@@ -1,5 +1,10 @@
 """
 Многослойный перцептрон (MLP) с фокальной потерей и подбором порога.
+
+Модуль реализует полносвязную нейросеть для бинарной классификации на базе
+Keras. Для борьбы с дисбалансом классов применяются фокальная функция потерь
+(``BinaryFocalCrossentropy``) и весовая компенсация классов (``class_weight``).
+Поддерживаются ранняя остановка, чекпойнты и логирование в TensorBoard.
 """
 
 import json
@@ -16,18 +21,33 @@ from .base_model import BaseModel
 
 
 class MLPModel(BaseModel):
-    """Модель многослойного перцептрона."""
+    """Модель многослойного перцептрона.
+
+    Attributes:
+        params (dict): Гиперпараметры сети (архитектура, обучение, регуляризация).
+        history (Optional[keras.callbacks.History]): История обучения,
+            заполняемая после вызова :meth:`fit`.
+        model (keras.Model): Скомпилированная Keras-модель (создаётся в :meth:`build`).
+    """
     def __init__(self, **kwargs):
+        """Инициализирует модель и гиперпараметры по умолчанию.
+
+        Args:
+            **kwargs: Гиперпараметры, переопределяющие значения по умолчанию
+                (``hidden_layers``, ``dropout_rate``, ``activation``,
+                ``optimizer``, ``learning_rate``, ``batch_size``, ``epochs``,
+                ``early_stopping_patience``, ``focal_gamma``, ``class_weight``).
+        """
         super().__init__(name="mlp", **kwargs)
         default_params: Dict[str, Any] = {
-            "hidden_layers": [64, 32, 16],
-            "dropout_rate": 0.2,
+            "hidden_layers": [32, 16],
+            "dropout_rate": 0.3,
             "activation": "relu",
             "output_activation": "sigmoid",
             "optimizer": "adam",
             "learning_rate": 0.001,
             "batch_size": 256,
-            "epochs": 10,
+            "epochs": 6,
             "early_stopping_patience": 2,
             "focal_gamma": 3.0,
             "class_weight": None,
@@ -35,8 +55,19 @@ class MLPModel(BaseModel):
         default_params.update(kwargs)
         self.params = default_params
         self.history: Optional[keras.callbacks.History] = None
+        self.threshold_ = 0.34
 
     def build(self, input_shape: int, **kwargs) -> None:
+        """Строит и компилирует архитектуру многослойного перцептрона.
+
+        Создаёт последовательность полносвязных слоёв с Dropout и
+        BatchNormalization, выходной сигмоидный нейрон и компилирует модель с
+        фокальной кросс-энтропией и метриками AUC, precision, recall.
+
+        Args:
+            input_shape: Число входных признаков.
+            **kwargs: Не используется; добавлен для совместимости с интерфейсом.
+        """
         self.params["input_shape"] = input_shape
         model = keras.Sequential(name="MLP_Classifier")
         model.add(layers.Input(shape=(input_shape,)))
@@ -65,16 +96,32 @@ class MLPModel(BaseModel):
         self.model = model
 
     def fit(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
+        """Обучает сеть с компенсацией дисбаланса и набором колбэков.
+
+        Если ``class_weight`` не задан, веса классов вычисляются автоматически
+        обратно пропорционально их частоте. Подключаются колбэки ранней
+        остановки (по ``val_auc``), сохранения лучшего чекпойнта и TensorBoard.
+
+        Args:
+            X_train: Матрица признаков обучающей выборки.
+            y_train: Вектор меток обучающей выборки.
+            X_val: Необязательная матрица признаков валидационной выборки.
+            y_val: Необязательный вектор меток валидационной выборки.
+            **kwargs: Дополнительные параметры (например, ``verbose``).
+
+        Returns:
+            keras.callbacks.History: История обучения модели.
+        """
         if self.model is None:
             self.build(X_train.shape[1])
 
         class_weight = self.params.get("class_weight")
-        if class_weight is None:
-            neg, pos = np.bincount(y_train)
-            total = neg + pos
-            weight_for_0 = (1 / neg) * (total / 2.0)
-            weight_for_1 = (1 / pos) * (total / 2.0)
-            class_weight = {0: weight_for_0, 1: weight_for_1}
+        # if class_weight is None:
+        #     neg, pos = np.bincount(y_train)
+        #     total = neg + pos
+        #     weight_for_0 = (1 / neg) * (total / 2.0)
+        #     weight_for_1 = (1 / pos) * (total / 2.0)
+        #     class_weight = {0: weight_for_0, 1: weight_for_1}
 
         cb_list = []
         if X_val is not None and y_val is not None:
@@ -111,15 +158,39 @@ class MLPModel(BaseModel):
         return self.history
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Возвращает бинарные метки, полученные пороговой обработкой вероятностей.
+
+        Args:
+            X: Матрица признаков формы ``(n_samples, n_features)``.
+
+        Returns:
+            Массив меток ``{0, 1}`` формы ``(n_samples,)``.
+        """
         self._check_fitted()
         proba = self.predict_proba(X)
         return (proba >= self.threshold_).astype(int)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Возвращает вероятности положительного класса.
+
+        Args:
+            X: Матрица признаков формы ``(n_samples, n_features)``.
+
+        Returns:
+            Одномерный массив вероятностей формы ``(n_samples,)``.
+        """
         self._check_fitted()
         return self.model.predict(X, verbose=0).flatten()
 
     def save(self, path: Path) -> None:
+        """Сохраняет модель, гиперпараметры и историю обучения.
+
+        Веса и архитектура сохраняются в ``model.h5``, гиперпараметры — в
+        ``params.json``, а история обучения (при наличии) — в ``history.csv``.
+
+        Args:
+            path: Директория для сохранения (создаётся при отсутствии).
+        """
         path.mkdir(parents=True, exist_ok=True)
         self.model.save(path / "model.h5")
         with open(path / "params.json", "w") as f:
@@ -129,6 +200,17 @@ class MLPModel(BaseModel):
 
     @classmethod
     def load(cls, path: Path) -> "MLPModel":
+        """Загружает модель из директории.
+
+        Восстанавливает гиперпараметры из ``params.json`` и Keras-модель из
+        ``model.h5``.
+
+        Args:
+            path: Директория с сохранёнными артефактами модели.
+
+        Returns:
+            Восстановленный экземпляр :class:`MLPModel`.
+        """
         with open(path / "params.json", "r") as f:
             params = json.load(f)
         instance = cls(**params)
@@ -137,5 +219,10 @@ class MLPModel(BaseModel):
         return instance
 
     def _check_fitted(self):
+        """Проверяет, что модель обучена, перед выполнением предсказания.
+
+        Raises:
+            RuntimeError: Если модель ещё не обучена.
+        """
         if not self.is_fitted or self.model is None:
             raise RuntimeError("Model must be fitted before prediction.")

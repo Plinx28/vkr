@@ -1,5 +1,13 @@
 """
 Оценка обученных моделей на тестовой выборке (data/test).
+
+Скрипт командной строки: загружает тестовые данные, восстанавливает одну или
+все обученные модели из директории ``models/``, вычисляет для каждой набор
+метрик качества и время инференса, выводит результаты в консоль и сохраняет
+сводную таблицу в CSV.
+
+Пример запуска:
+    python evaluate.py --model all --output_dir reports/metrics
 """
 
 import argparse
@@ -20,6 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Реестр моделей: сопоставляет имя директории модели с её классом.
 MODEL_REGISTRY = {
     "lr": LogisticRegressionModel,
     "xgboost": XGBoostModel,
@@ -29,6 +38,13 @@ MODEL_REGISTRY = {
 
 
 def parse_args():
+    """Разбирает аргументы командной строки.
+
+    Returns:
+        argparse.Namespace: Объект с полями ``model`` (имя конкретной модели
+        или ``"all"`` для оценки всех) и ``output_dir`` (директория для
+        сохранения сводной таблицы метрик).
+    """
     parser = argparse.ArgumentParser(
         description="Evaluate trained models on test data."
     )
@@ -44,6 +60,22 @@ def parse_args():
 
 
 def evaluate_model(model_name, model, X_test, y_test):
+    """Оценивает одну модель на тестовой выборке.
+
+    Выполняет предсказание меток, при наличии — предсказание вероятностей,
+    замеряет время инференса и вычисляет метрики качества.
+
+    Args:
+        model_name: Имя модели (добавляется в результирующий словарь).
+        model: Загруженный экземпляр модели с методами ``predict`` и,
+            опционально, ``predict_proba``.
+        X_test: Матрица признаков тестовой выборки.
+        y_test: Вектор истинных меток тестовой выборки.
+
+    Returns:
+        dict: Словарь метрик, дополненный полями ``inference_time_sec``
+        (время инференса в секундах) и ``model`` (имя модели).
+    """
     logger.info(f"Evaluating {model_name}...")
     logger.info(f"Threshold {model.threshold_}...")
     start = time.perf_counter()
@@ -61,6 +93,13 @@ def evaluate_model(model_name, model, X_test, y_test):
 
 
 def main():
+    """Точка входа: оценка выбранной модели или всех моделей.
+
+    Загружает тестовые данные, определяет список оцениваемых моделей,
+    последовательно восстанавливает каждую из директории ``models/``,
+    вычисляет метрики, печатает их в консоль и сохраняет общую сводку в
+    CSV-файл ``evaluation_summary.csv`` в указанной директории вывода.
+    """
     args = parse_args()
     set_seed(42)
 

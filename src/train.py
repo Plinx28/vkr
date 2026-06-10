@@ -1,5 +1,14 @@
 """
 Скрипт обучения моделей на полных данных из data/train, с валидацией на data/val.
+
+Запускается из командной строки. Выбирает модель по имени из реестра
+``MODEL_REGISTRY``, при необходимости подгружает гиперпараметры из JSON-файла,
+загружает обучающую и валидационную выборки, обучает модель, подбирает порог
+бинаризации и сохраняет артефакты. Для нейросетевых моделей дополнительно
+строит графики истории обучения.
+
+Пример запуска:
+    python train.py --model xgboost --params configs/xgb.json --seed 42
 """
 
 import argparse
@@ -21,6 +30,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Реестр доступных моделей: сопоставляет имя из CLI с классом модели.
+# Для каждой модели предусмотрены краткий и полный псевдонимы.
 MODEL_REGISTRY = {
     "lr": LogisticRegressionModel,
     "logistic_regression": LogisticRegressionModel,
@@ -33,6 +44,13 @@ MODEL_REGISTRY = {
 
 
 def parse_args():
+    """Разбирает аргументы командной строки.
+
+    Returns:
+        argparse.Namespace: Объект с полями ``model`` (имя модели из реестра),
+        ``params`` (путь к JSON с гиперпараметрами или ``None``),
+        ``output_dir`` (директория для сохранения) и ``seed`` (значение seed).
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--model", type=str, required=True, choices=MODEL_REGISTRY.keys()
@@ -43,7 +61,19 @@ def parse_args():
     return parser.parse_args()
 
 
-def plot_training_history(history, model_name, save_dir):
+def plot_training_history(history, model_name, save_dir) -> None:
+    """Строит и сохраняет графики истории обучения нейросетевой модели.
+
+    Формирует два подграфика: динамику функции потерь (train/val) и динамику
+    остальных метрик по эпохам. Результат сохраняется в PNG-файл. Если
+    история не передана, функция ничего не делает.
+
+    Args:
+        history: Объект истории обучения Keras (с атрибутом ``.history``)
+            либо ``None``.
+        model_name: Имя модели, используемое в заголовках и имени файла.
+        save_dir (Path): Директория для сохранения изображения.
+    """
     if history is None:
         return
     save_dir.mkdir(parents=True, exist_ok=True)
@@ -71,6 +101,12 @@ def plot_training_history(history, model_name, save_dir):
 
 
 def main():
+    """Точка входа: полный цикл обучения одной модели.
+
+    Последовательно выполняет: фиксацию seed, создание модели с
+    гиперпараметрами, загрузку обучающей и валидационной выборок, обучение,
+    подбор порога на валидации, сохранение модели.
+    """
     args = parse_args()
     set_seed(args.seed)
 
