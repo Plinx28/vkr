@@ -40,14 +40,14 @@ class MLPModel(BaseModel):
         """
         super().__init__(name="mlp", **kwargs)
         default_params: Dict[str, Any] = {
-            "hidden_layers": [32, 16],
-            "dropout_rate": 0.3,
+            "hidden_layers": [64, 32, 16],
+            "dropout_rate": 0.2,
             "activation": "relu",
             "output_activation": "sigmoid",
             "optimizer": "adam",
             "learning_rate": 0.001,
             "batch_size": 256,
-            "epochs": 6,
+            "epochs": 10,
             "early_stopping_patience": 2,
             "focal_gamma": 3.0,
             "class_weight": None,
@@ -55,7 +55,6 @@ class MLPModel(BaseModel):
         default_params.update(kwargs)
         self.params = default_params
         self.history: Optional[keras.callbacks.History] = None
-        self.threshold_ = 0.34
 
     def build(self, input_shape: int, **kwargs) -> None:
         """Строит и компилирует архитектуру многослойного перцептрона.
@@ -116,12 +115,12 @@ class MLPModel(BaseModel):
             self.build(X_train.shape[1])
 
         class_weight = self.params.get("class_weight")
-        # if class_weight is None:
-        #     neg, pos = np.bincount(y_train)
-        #     total = neg + pos
-        #     weight_for_0 = (1 / neg) * (total / 2.0)
-        #     weight_for_1 = (1 / pos) * (total / 2.0)
-        #     class_weight = {0: weight_for_0, 1: weight_for_1}
+        if class_weight is None:
+            neg, pos = np.bincount(y_train)
+            total = neg + pos
+            weight_for_0 = (1 / neg) * (total / 2.0)
+            weight_for_1 = (1 / pos) * (total / 2.0)
+            class_weight = {0: weight_for_0, 1: weight_for_1}
 
         cb_list = []
         if X_val is not None and y_val is not None:
@@ -197,6 +196,7 @@ class MLPModel(BaseModel):
             json.dump(self.params, f, indent=2)
         if self.history is not None:
             pd.DataFrame(self.history.history).to_csv(path / "history.csv", index=False)
+        self._save_threshold(path)
 
     @classmethod
     def load(cls, path: Path) -> "MLPModel":
@@ -216,6 +216,7 @@ class MLPModel(BaseModel):
         instance = cls(**params)
         instance.model = keras.models.load_model(path / "model.h5")
         instance.is_fitted = True
+        instance._load_threshold(path)
         return instance
 
     def _check_fitted(self):

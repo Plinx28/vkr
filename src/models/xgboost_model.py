@@ -106,7 +106,11 @@ class XGBoostModel(BaseModel):
         self.is_fitted = True
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        """Возвращает предсказанные бинарные метки классов.
+        """Возвращает бинарные метки, полученные пороговой обработкой вероятностей.
+
+        Метки определяются сравнением вероятности положительного класса с
+        порогом ``threshold_`` (подобранным на валидации), что обеспечивает
+        единообразие поведения со всеми остальными моделями проекта.
 
         Args:
             X: Матрица признаков формы ``(n_samples, n_features)``.
@@ -115,7 +119,8 @@ class XGBoostModel(BaseModel):
             Массив меток ``{0, 1}`` формы ``(n_samples,)``.
         """
         self._check_fitted()
-        return self.model.predict(X)
+        proba = self.predict_proba(X)
+        return (proba >= self.threshold_).astype(int)
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Возвращает вероятности положительного класса.
@@ -144,6 +149,7 @@ class XGBoostModel(BaseModel):
         # Сохраняем параметры отдельно
         params_path = path / "params.joblib"
         joblib.dump(self.params, params_path)
+        self._save_threshold(path)
 
     @classmethod
     def load(cls, path: Path) -> "XGBoostModel":
@@ -165,4 +171,14 @@ class XGBoostModel(BaseModel):
         instance.model = xgb.XGBClassifier()
         instance.model.load_model(model_path)
         instance.is_fitted = True
+        instance._load_threshold(path)
         return instance
+
+    def _check_fitted(self):
+        """Проверяет, что модель обучена, перед выполнением предсказания.
+
+        Raises:
+            RuntimeError: Если модель ещё не обучена.
+        """
+        if not self.is_fitted or self.model is None:
+            raise RuntimeError("Model must be fitted before prediction.")

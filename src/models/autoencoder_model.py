@@ -243,6 +243,7 @@ class AutoencoderModel(BaseModel):
             json.dump(self.params, f, indent=2)
         if self.history is not None:
             pd.DataFrame(self.history.history).to_csv(path / "history.csv", index=False)
+        self._save_threshold(path)
 
     @classmethod
     def load(cls, path: Path) -> "AutoencoderModel":
@@ -267,4 +268,14 @@ class AutoencoderModel(BaseModel):
             outputs=instance.full_model.get_layer("bottleneck").output
         )
         instance.is_fitted = True
+        instance._load_threshold(path)
         return instance
+
+    def _check_fitted(self):
+        """Проверяет, что модель обучена, перед выполнением предсказания.
+
+        Raises:
+            RuntimeError: Если модель ещё не обучена.
+        """
+        if not self.is_fitted or self.full_model is None:
+            raise RuntimeError("Model must be fitted before prediction.")

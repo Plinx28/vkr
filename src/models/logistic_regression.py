@@ -41,11 +41,11 @@ class LogisticRegressionModel(BaseModel):
 
         default_params: Dict[str, Any] = {
             "penalty": "l2",           # L2-регуляризация для устойчивости
-            "C": 20.0,                  # Сила регуляризации (меньше C → сильнее регуляризация)
+            "C": 10.0,                  # Сила регуляризации (меньше C → сильнее регуляризация)
             "solver": "lbfgs",
-            "max_iter": 10000,          # Максимальное число итераций
+            "max_iter": 50,          # Максимальное число итераций
             "tol": 1e-3,               # Критерий остановки по изменению коэффициентов
-            "class_weight": None,
+            "class_weight": "balanced",
             "random_state": 42,
             "verbose": 1,
         }
@@ -135,6 +135,7 @@ class LogisticRegressionModel(BaseModel):
             "input_shape": self._input_shape
         }
         joblib.dump(data, model_path)
+        self._save_threshold(path)
 
     @classmethod
     def load(cls, path: Path) -> "LogisticRegressionModel":
@@ -152,4 +153,14 @@ class LogisticRegressionModel(BaseModel):
         instance.model = data["model"]
         instance._input_shape = data.get("input_shape")
         instance.is_fitted = True
+        instance._load_threshold(path)
         return instance
+
+    def _check_fitted(self):
+        """Проверяет, что модель обучена, перед выполнением предсказания.
+
+        Raises:
+            RuntimeError: Если модель ещё не обучена.
+        """
+        if not self.is_fitted or self.model is None:
+            raise RuntimeError("Model must be fitted before prediction.")

@@ -9,6 +9,7 @@
 от деталей конкретной реализации.
 """
 
+import json
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Any
@@ -140,7 +141,7 @@ class BaseModel(ABC):
             ``self.threshold_``).
         """
         probas = self.predict_proba(X_val)
-        thresholds = np.arange(0.1, 0.9, 0.01)
+        thresholds = np.arange(0.01, 0.99, 0.01)
         scores = []
         for thr in thresholds:
             preds = (probas >= thr).astype(int)
@@ -152,3 +153,31 @@ class BaseModel(ABC):
         self.threshold_ = thresholds[best_idx]
         print(f"optimized threshold {self.threshold_}")
         return self.threshold_
+
+    def _save_threshold(self, path: Path) -> None:
+        """Сохраняет подобранный порог бинаризации в файл ``threshold.json``.
+
+        Метод вызывается из :meth:`save` конкретных моделей, чтобы порог,
+        найденный на валидации в :meth:`optimize_threshold`, сохранялся вместе
+        с моделью и не сбрасывался к значению по умолчанию при загрузке.
+
+        Args:
+            path: Директория, в которую сохраняется модель.
+        """
+        with open(Path(path) / "threshold.json", "w") as f:
+            json.dump({"threshold": float(self.threshold_)}, f)
+
+    def _load_threshold(self, path: Path) -> None:
+        """Восстанавливает порог бинаризации из файла ``threshold.json``.
+
+        Если файл отсутствует (например, модель сохранена старой версией кода),
+        порог не изменяется и сохраняет значение по умолчанию, заданное в
+        конструкторе модели.
+
+        Args:
+            path: Директория, из которой загружается модель.
+        """
+        threshold_path = Path(path) / "threshold.json"
+        if threshold_path.exists():
+            with open(threshold_path, "r") as f:
+                self.threshold_ = json.load(f)["threshold"]
