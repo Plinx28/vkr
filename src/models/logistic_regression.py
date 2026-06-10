@@ -43,9 +43,9 @@ class LogisticRegressionModel(BaseModel):
             "penalty": "l2",           # L2-регуляризация для устойчивости
             "C": 10.0,                  # Сила регуляризации (меньше C → сильнее регуляризация)
             "solver": "lbfgs",
-            "max_iter": 50,          # Максимальное число итераций
+            "max_iter": 1000,          # Максимальное число итераций
             "tol": 1e-3,               # Критерий остановки по изменению коэффициентов
-            "class_weight": "balanced",
+            # "class_weight": "balanced",
             "random_state": 42,
             "verbose": 1,
         }

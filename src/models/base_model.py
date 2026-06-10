@@ -123,35 +123,21 @@ class BaseModel(ABC):
         """
         pass
 
-    def optimize_threshold(self, X_val: np.ndarray, y_val: np.ndarray, metric: str = "f1") -> float:
-        """Подбирает порог, максимизирующий F1 или MCC на валидации.
-
-        Перебирает пороги в диапазоне ``[0.1, 0.9)`` с шагом ``0.01``, для
-        каждого вычисляет выбранную метрику на валидационной выборке и
-        сохраняет в ``self.threshold_`` порог с наилучшим значением метрики.
-
-        Args:
-            X_val: Матрица признаков валидационной выборки.
-            y_val: Вектор истинных меток валидационной выборки.
-            metric: Оптимизируемая метрика: ``"f1"`` (F1-мера) или
-                ``"mcc"`` (коэффициент корреляции Мэтьюса).
-
-        Returns:
-            Найденное оптимальное значение порога (также записывается в
-            ``self.threshold_``).
-        """
+    def optimize_threshold(self, X_val, y_val, metric: str = "f1", beta: float = 2.0) -> float:
         probas = self.predict_proba(X_val)
-        thresholds = np.arange(0.01, 0.99, 0.01)
+        thresholds = np.arange(0.1, 0.9, 0.01)
         scores = []
         for thr in thresholds:
             preds = (probas >= thr).astype(int)
             if metric == "f1":
-                scores.append(f1_score(y_val, preds))
+                scores.append(f1_score(y_val, preds, zero_division=0))
+            elif metric == "fbeta":
+                scores.append(fbeta_score(y_val, preds, beta=beta, zero_division=0))
             elif metric == "mcc":
                 scores.append(matthews_corrcoef(y_val, preds))
-        best_idx = np.argmax(scores)
-        self.threshold_ = thresholds[best_idx]
-        print(f"optimized threshold {self.threshold_}")
+        best_idx = int(np.argmax(scores))
+        self.threshold_ = float(thresholds[best_idx])
+        print(f"optimized threshold {self.threshold_} ({metric})")
         return self.threshold_
 
     def _save_threshold(self, path: Path) -> None:
